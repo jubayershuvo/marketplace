@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useAppSelector } from "@/lib/hooks";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 interface GigFormData {
   title: string;
@@ -54,7 +55,7 @@ const CreateGigPage = () => {
   const { isLoggedIn, user } = useAppSelector((state) => state.userAuth);
   const router = useRouter();
 
-  const [formData, setFormData] = useState<GigFormData>({
+  const [gigFormData, setGigFormData] = useState<GigFormData>({
     title: "",
     images: [],
     price: "",
@@ -144,45 +145,45 @@ const CreateGigPage = () => {
     } else if (!user.displayName) {
       router.push("/complete-profile");
     }
-  }, []);
+  }, [isLoggedIn, user.displayName, router]);
 
   const handleInputChange = <K extends keyof GigFormData>(
     field: K,
     value: GigFormData[K]
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setGigFormData((prev) => ({ ...prev, [field]: value }));
     setSubmitStatus("idle");
     setErrorMessage("");
   };
 
   const handleFeatureChange = (index: number, value: string) => {
-    const newFeatures = [...formData.features];
+    const newFeatures = [...gigFormData.features];
     newFeatures[index] = value;
-    setFormData((prev) => ({ ...prev, features: newFeatures }));
+    setGigFormData((prev) => ({ ...prev, features: newFeatures }));
   };
 
   const addFeature = () => {
-    setFormData((prev) => ({ ...prev, features: [...prev.features, ""] }));
+    setGigFormData((prev) => ({ ...prev, features: [...prev.features, ""] }));
   };
 
   const removeFeature = (index: number) => {
-    const newFeatures = formData.features.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, features: newFeatures }));
+    const newFeatures = gigFormData.features.filter((_, i) => i !== index);
+    setGigFormData((prev) => ({ ...prev, features: newFeatures }));
   };
 
   const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && e.currentTarget.value.trim()) {
       e.preventDefault();
       const newTag = e.currentTarget.value.trim();
-      if (!formData.tags.includes(newTag) && formData.tags.length < 10) {
-        setFormData((prev) => ({ ...prev, tags: [...prev.tags, newTag] }));
+      if (!gigFormData.tags.includes(newTag) && gigFormData.tags.length < 10) {
+        setGigFormData((prev) => ({ ...prev, tags: [...prev.tags, newTag] }));
       }
       e.currentTarget.value = "";
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({
+    setGigFormData((prev) => ({
       ...prev,
       tags: prev.tags.filter((tag) => tag !== tagToRemove),
     }));
@@ -193,21 +194,21 @@ const CreateGigPage = () => {
     field: "question" | "answer",
     value: string
   ) => {
-    const newFAQ = [...formData.faq];
+    const newFAQ = [...gigFormData.faq];
     newFAQ[index] = { ...newFAQ[index], [field]: value };
-    setFormData((prev) => ({ ...prev, faq: newFAQ }));
+    setGigFormData((prev) => ({ ...prev, faq: newFAQ }));
   };
 
   const addFAQ = () => {
-    setFormData((prev) => ({
+    setGigFormData((prev) => ({
       ...prev,
       faq: [...prev.faq, { question: "", answer: "" }],
     }));
   };
 
   const removeFAQ = (index: number) => {
-    const newFAQ = formData.faq.filter((_, i) => i !== index);
-    setFormData((prev) => ({ ...prev, faq: newFAQ }));
+    const newFAQ = gigFormData.faq.filter((_, i) => i !== index);
+    setGigFormData((prev) => ({ ...prev, faq: newFAQ }));
   };
 
   // File handling functions
@@ -249,16 +250,6 @@ const CreateGigPage = () => {
 
   const triggerFileSelect = () => {
     fileInputRef.current?.click();
-  };
-
-  // Upload images to a service (placeholder function)
-  const uploadImages = async (files: File[]): Promise<string[]> => {
-    // In a real application, you would upload to a service like Cloudinary, AWS S3, etc.
-    // For demo purposes, we'll create mock URLs
-    return files.map(
-      (file, index) =>
-        `https://example.com/images/${Date.now()}-${index}-${file.name}`
-    );
   };
 
   const steps = [
@@ -333,7 +324,7 @@ const CreateGigPage = () => {
         </label>
         <input
           type="text"
-          value={formData.title}
+          value={gigFormData.title}
           onChange={(e) => handleInputChange("title", e.target.value)}
           placeholder="I will do something I'm really good at"
           className="
@@ -345,7 +336,7 @@ const CreateGigPage = () => {
           maxLength={120}
         />
         <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">
-          {formData.title.length}/120
+          {gigFormData.title.length}/120
         </div>
       </div>
 
@@ -357,7 +348,7 @@ const CreateGigPage = () => {
           </label>
           <div className="relative">
             <select
-              value={formData.category}
+              value={gigFormData.category}
               onChange={(e) => {
                 handleInputChange("category", e.target.value);
                 handleInputChange("subcategory", ""); // Reset subcategory
@@ -386,9 +377,9 @@ const CreateGigPage = () => {
           </label>
           <div className="relative">
             <select
-              value={formData.subcategory}
+              value={gigFormData.subcategory}
               onChange={(e) => handleInputChange("subcategory", e.target.value)}
-              disabled={!formData.category}
+              disabled={!gigFormData.category}
               className="
               w-full px-4 py-3 rounded-lg border appearance-none transition-colors
               bg-white border-gray-300 text-gray-900
@@ -399,9 +390,9 @@ const CreateGigPage = () => {
             "
             >
               <option value="">Select a subcategory</option>
-              {formData.category &&
+              {gigFormData.category &&
                 categories
-                  .find((cat) => cat.value === formData.category)
+                  .find((cat) => cat.value === gigFormData.category)
                   ?.subcategories.map((subcat) => (
                     <option key={subcat} value={subcat}>
                       {subcat}
@@ -422,7 +413,7 @@ const CreateGigPage = () => {
           type="text"
           onKeyDown={handleTagInput}
           placeholder="Press Enter to add tags (e.g., web design, logo, branding)"
-          disabled={formData.tags.length >= 10}
+          disabled={gigFormData.tags.length >= 10}
           className="
           w-full px-4 py-3 rounded-lg border transition-colors
           bg-white border-gray-300 text-gray-900 placeholder-gray-500
@@ -432,9 +423,9 @@ const CreateGigPage = () => {
           dark:disabled:bg-gray-700
         "
         />
-        {formData.tags.length > 0 && (
+        {gigFormData.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {formData.tags.map((tag) => (
+            {gigFormData.tags.map((tag) => (
               <span
                 key={tag}
                 className="
@@ -471,7 +462,7 @@ const CreateGigPage = () => {
 
             <input
               type="number"
-              value={formData?.price}
+              value={gigFormData?.price}
               onChange={(e) => handleInputChange("price", e.target.value)}
               min={5}
               step={5}
@@ -491,7 +482,7 @@ const CreateGigPage = () => {
             <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="number"
-              value={formData?.originalPrice}
+              value={gigFormData?.originalPrice}
               onChange={(e) =>
                 handleInputChange(
                   "originalPrice",
@@ -515,7 +506,7 @@ const CreateGigPage = () => {
           <div className="relative">
             <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
-              value={formData.deliveryTime}
+              value={gigFormData.deliveryTime}
               onChange={(e) =>
                 handleInputChange("deliveryTime", e.target.value)
               }
@@ -538,7 +529,7 @@ const CreateGigPage = () => {
           <div className="relative">
             <RefreshCw className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <select
-              value={formData.revisions}
+              value={gigFormData.revisions}
               onChange={(e) => handleInputChange("revisions", e.target.value)}
               className="w-full pl-10 pr-10 py-3 rounded-lg border appearance-none transition-colors bg-white border-gray-300 text-gray-900 focus:border-green-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
             >
@@ -561,7 +552,7 @@ const CreateGigPage = () => {
           What you&apos;ll get
         </label>
         <div className="space-y-3">
-          {formData.features.map((feature, index) => (
+          {gigFormData.features.map((feature, index) => (
             <div key={index} className="flex gap-3">
               <input
                 type="text"
@@ -570,7 +561,7 @@ const CreateGigPage = () => {
                 placeholder="e.g., Logo transparency, Vector file, Printable file"
                 className="flex-1 px-4 py-3 rounded-lg border transition-colors bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
               />
-              {formData.features.length > 1 && (
+              {gigFormData.features.length > 1 && (
                 <button
                   onClick={() => removeFeature(index)}
                   className="px-3 py-3 rounded-lg border transition-colors hover:bg-red-50 hover:border-red-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-red-900/20 dark:hover:border-red-600 dark:hover:text-red-400"
@@ -599,7 +590,7 @@ const CreateGigPage = () => {
           Description *
         </label>
         <textarea
-          value={formData.description}
+          value={gigFormData.description}
           onChange={(e) => handleInputChange("description", e.target.value)}
           placeholder="Describe your service in detail. What makes it unique? What will the buyer get exactly?"
           rows={6}
@@ -607,17 +598,16 @@ const CreateGigPage = () => {
           className="w-full px-4 py-3 rounded-lg border transition-colors resize-none bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
         />
         <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">
-          {formData.description.length}/5000
+          {gigFormData.description.length}/5000
         </div>
       </div>
-
 
       <div>
         <label className="block text-sm font-medium mb-4 text-gray-700 dark:text-gray-300">
           Frequently Asked Questions
         </label>
         <div className="space-y-4">
-          {formData.faq.map((item, index) => (
+          {gigFormData.faq.map((item, index) => (
             <div
               key={index}
               className="p-4 rounded-lg border bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-600"
@@ -626,7 +616,7 @@ const CreateGigPage = () => {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   FAQ #{index + 1}
                 </span>
-                {formData.faq.length > 1 && (
+                {gigFormData.faq.length > 1 && (
                   <button
                     onClick={() => removeFAQ(index)}
                     className="text-gray-400 hover:text-red-500 transition-colors"
@@ -761,7 +751,7 @@ const CreateGigPage = () => {
           <Video className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="url"
-            value={formData.video}
+            value={gigFormData.video}
             onChange={(e) => handleInputChange("video", e.target.value)}
             placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
             className="w-full pl-10 pr-4 py-3 rounded-lg border transition-colors bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500/20"
@@ -807,58 +797,61 @@ const CreateGigPage = () => {
         return;
       }
 
-      // Upload images first (if any)
-      let imageUrls: string[] = [];
-      if (selectedFiles.length > 0) {
-        try {
-          imageUrls = await uploadImages(selectedFiles);
-        } catch (uploadError) {
-          console.error("Image upload failed:", uploadError);
-          setErrorMessage("Failed to upload images. Please try again.");
-          setSubmitStatus("error");
-          setIsSubmitting(false);
-          return;
-        }
+      // Create FormData for the entire gig creation
+      const formData = new FormData();
+      
+      // Add text fields
+      formData.append('title', gigFormData.title);
+      formData.append('price', gigFormData.price);
+      if (gigFormData.originalPrice) {
+        formData.append('originalPrice', gigFormData.originalPrice);
+      }
+      formData.append('description', gigFormData.description);
+      formData.append('deliveryTime', gigFormData.deliveryTime);
+      formData.append('revisions', gigFormData.revisions);
+      formData.append('category', gigFormData.category);
+      formData.append('subcategory', gigFormData.subcategory);
+      if (gigFormData.video) {
+        formData.append('video', gigFormData.video);
       }
 
-      // Prepare form data for submission
-      const submitData = {
-        ...formData,
-        images: imageUrls,
-        // Filter out empty features and FAQs
-        features: formData.features.filter((f) => f.trim().length > 0),
-        faq: formData.faq.filter((f) => f.question.trim() && f.answer.trim()),
-      };
+      // Add arrays as JSON strings
+      formData.append('features', JSON.stringify(gigFormData.features.filter(f => f.trim().length > 0)));
+      formData.append('tags', JSON.stringify(gigFormData.tags));
+      formData.append('faq', JSON.stringify(gigFormData.faq.filter(f => f.question.trim() && f.answer.trim())));
 
-      // Submit to API
-      const response = await fetch("/api/create-new-gig", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submitData),
+      // Add image files
+      selectedFiles.forEach((file) => {
+        formData.append('images', file);
       });
 
-      const data = await response.json();
+      // Submit to API
+      const response = await axios.post("/api/create-new-gig", formData, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
-      }
+      const data = response.data;
+      console.log(data);
 
       setSubmitStatus("success");
 
       // Reset form after successful submission
       setTimeout(() => {
         resetForm();
-        router.push(`/gig?id=${data.gig._id}`);
+        router.push(`/gig/${data.gig._id}`);
       }, 1000);
     } catch (error) {
       console.error("Error creating gig:", error);
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to create gig. Please try again."
-      );
+      
+      let errorMsg = "Failed to create gig. Please try again.";
+      if (axios.isAxiosError(error)) {
+        errorMsg = error.response?.data?.message || error.message;
+      }
+      
+      setErrorMessage(errorMsg);
       setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
@@ -868,21 +861,21 @@ const CreateGigPage = () => {
   const validateForm = () => {
     const errors: string[] = [];
 
-    if (!formData.title.trim()) errors.push("Title is required");
-    if (!formData.category) errors.push("Category is required");
-    if (!formData.subcategory) errors.push("Subcategory is required");
-    if (!formData.price) errors.push("Price must be at least $5");
-    if (!formData.deliveryTime) errors.push("Delivery time is required");
-    if (!formData.revisions) errors.push("Revisions are required");
-    if (!formData.description.trim()) errors.push("Description is required");
-    if (formData.features.filter((f) => f.trim()).length === 0)
+    if (!gigFormData.title.trim()) errors.push("Title is required");
+    if (!gigFormData.category) errors.push("Category is required");
+    if (!gigFormData.subcategory) errors.push("Subcategory is required");
+    if (!gigFormData.price) errors.push("Price must be at least $5");
+    if (!gigFormData.deliveryTime) errors.push("Delivery time is required");
+    if (!gigFormData.revisions) errors.push("Revisions are required");
+    if (!gigFormData.description.trim()) errors.push("Description is required");
+    if (gigFormData.features.filter((f) => f.trim()).length === 0)
       errors.push("At least one feature is required");
 
     return errors;
   };
 
   const resetForm = () => {
-    setFormData({
+    setGigFormData({
       title: "",
       price: "",
       originalPrice: undefined,
@@ -906,16 +899,16 @@ const CreateGigPage = () => {
   const canGoNext = () => {
     switch (currentStep) {
       case 1:
-        return formData.title && formData.category && formData.subcategory;
+        return gigFormData.title && gigFormData.category && gigFormData.subcategory;
       case 2:
         return (
-          formData.price &&
-          formData.deliveryTime &&
-          formData.revisions &&
-          formData.features.some((f) => f.trim())
+          gigFormData.price &&
+          gigFormData.deliveryTime &&
+          gigFormData.revisions &&
+          gigFormData.features.some((f) => f.trim())
         );
       case 3:
-        return formData.description.trim().length > 0;
+        return gigFormData.description.trim().length > 0;
       case 4:
         return true; // Images are optional
       default:
@@ -925,14 +918,14 @@ const CreateGigPage = () => {
 
   const isFormValid = () => {
     return (
-      formData.title &&
-      formData.category &&
-      formData.subcategory &&
-      formData.price &&
-      formData.deliveryTime &&
-      formData.revisions &&
-      formData.description.trim() &&
-      formData.features.some((f) => f.trim())
+      gigFormData.title &&
+      gigFormData.category &&
+      gigFormData.subcategory &&
+      gigFormData.price &&
+      gigFormData.deliveryTime &&
+      gigFormData.revisions &&
+      gigFormData.description.trim() &&
+      gigFormData.features.some((f) => f.trim())
     );
   };
 
@@ -1055,39 +1048,39 @@ const CreateGigPage = () => {
             <div className="flex items-center gap-4">
               <span
                 className={`flex items-center ${
-                  formData.title
+                  gigFormData.title
                     ? "text-green-500"
                     : "text-gray-400 dark:text-gray-500"
                 }`}
               >
-                {formData.title ? "✓" : "○"} Title
+                {gigFormData.title ? "✓" : "○"} Title
               </span>
               <span
                 className={`flex items-center ${
-                  formData.category
+                  gigFormData.category
                     ? "text-green-500"
                     : "text-gray-400 dark:text-gray-500"
                 }`}
               >
-                {formData.category ? "✓" : "○"} Category
+                {gigFormData.category ? "✓" : "○"} Category
               </span>
               <span
                 className={`flex items-center ${
-                  formData.price
+                  gigFormData.price
                     ? "text-green-500"
                     : "text-gray-400 dark:text-gray-500"
                 }`}
               >
-                {formData.price ? "✓" : "○"} Pricing
+                {gigFormData.price ? "✓" : "○"} Pricing
               </span>
               <span
                 className={`flex items-center ${
-                  formData.description
+                  gigFormData.description
                     ? "text-green-500"
                     : "text-gray-400 dark:text-gray-500"
                 }`}
               >
-                {formData.description ? "✓" : "○"} Description
+                {gigFormData.description ? "✓" : "○"} Description
               </span>
             </div>
           </div>

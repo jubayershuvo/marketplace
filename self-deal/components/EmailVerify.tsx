@@ -14,6 +14,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { useRouter } from "next/navigation";
 import { userLogin } from "@/lib/userSlice";
+import axios from "axios";
 
 type VerificationStatus = "pending" | "success" | "error";
 
@@ -200,20 +201,16 @@ export default function VerifyEmailOTP() {
     setMessage("");
 
     try {
-      const response = await fetch("/api/verify-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          otp: otpCode,
-        }),
+      const response = await axios.post("/api/verify-otp", {
+        email: email,
+        otp: otpCode,
+      }, {
+        withCredentials: true,
       });
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (response.ok) {
+      if (response.status === 200) {
         dispatch(userLogin(data));
         setVerificationStatus("success");
         setMessage(

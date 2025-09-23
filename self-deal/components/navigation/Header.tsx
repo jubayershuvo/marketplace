@@ -243,20 +243,11 @@ const navData: {
     },
 
     // Client-specific mobile items
+
     
-    {
-      label: "Post a Request",
-      href: "/post-request",
-      userTypes: ["client"],
-    },
     {
       label: "My Orders",
       href: "/users/orders",
-      userTypes: ["client"],
-    },
-    {
-      label: "Buyer Requests",
-      href: "/buyer-requests",
       userTypes: ["client"],
     },
 
@@ -310,7 +301,6 @@ const NavItem: React.FC<NavItemProps> = ({ item, onClick }) => {
     <Link
       href={item.href}
       className={item.isPrimary ? primaryClasses : baseClasses}
-      
     >
       <div className={item.isPrimary ? primaryClasses : baseClasses}>
         {item.label}
@@ -754,7 +744,6 @@ const FiverrHeader: React.FC = () => {
                               <Link
                                 key={`user-menu-${index}`}
                                 href={item.href || "#"}
-                                
                               >
                                 <div className="flex items-center space-x-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                   <Icon size={16} />
@@ -871,11 +860,7 @@ const FiverrHeader: React.FC = () => {
                   </p>
                 </div>
                 {navData.mobileGuestItems.map((item, index) => (
-                  <Link
-                    key={`mobile-guest-${index}`}
-                    href={item.href || "#"}
-                 
-                  >
+                  <Link key={`mobile-guest-${index}`} href={item.href || "#"}>
                     <div
                       className={
                         item.isPrimary
@@ -964,7 +949,6 @@ const FiverrHeader: React.FC = () => {
                         key={`mobile-user-${index}`}
                         href={item.href || "#"}
                         onClick={() => setIsMobileMenuOpen(false)}
-                       
                       >
                         <div className="flex items-center justify-between py-3 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 transition-colors">
                           <span className="font-medium">{item.label}</span>
@@ -985,14 +969,14 @@ const FiverrHeader: React.FC = () => {
                     Account
                   </div>
 
-                  <Link href="/profile">
+                  <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="flex items-center space-x-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 transition-colors">
                       <User size={18} />
                       <span>Profile</span>
                     </div>
                   </Link>
 
-                  <Link href="/settings">
+                  <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="flex items-center space-x-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 transition-colors">
                       <Settings size={18} />
                       <span>Settings</span>
@@ -1000,10 +984,15 @@ const FiverrHeader: React.FC = () => {
                   </Link>
 
                   <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMobileMenuOpen(false);
-                      router.push("/login");
+                    onClick={async () => {
+                      try {
+                        await axios.get("/api/logout");
+                        handleLogout();
+                        setIsMobileMenuOpen(false);
+                        router.push("/login");
+                      } catch (error) {
+                        console.log(error);
+                      }
                     }}
                     className="flex items-center space-x-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg px-2 transition-colors w-full text-left"
                     type="button"

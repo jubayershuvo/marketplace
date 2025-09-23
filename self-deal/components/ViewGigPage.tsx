@@ -89,7 +89,6 @@ interface Gig {
   isLiked: boolean;
 }
 
-
 const ViewGigPage = () => {
   const [gig, setGig] = useState<Gig | null>(null); // Using first gig for demo
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -154,15 +153,14 @@ const ViewGigPage = () => {
 
   const sinceFrom = (): string => {
     const date = new Date(gig.freelancer.createdAt);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const dateOptions: Intl.DateTimeFormatOptions = {
       year: "numeric",
       month: "long",
       day: "numeric",
     };
-    return new Intl.DateTimeFormat("en-US", dateOptions).format(date).replace(/\s/g, " "); // Fix date formatting
+    return new Intl.DateTimeFormat("en-US", dateOptions)
+      .format(date)
+      .replace(/\s/g, " "); // Fix date formatting
   };
 
   return (
@@ -278,10 +276,12 @@ const ViewGigPage = () => {
                       <span className="font-medium">
                         {gig.freelancer.rating}
                       </span>
-                      <span>({gig.freelancer.reviewsCount} reviews)</span>
+                      {gig.freelancer.reviewsCount > 0 && (
+                        <span>({gig.freelancer.reviewsCount} reviews)</span>
+                      )}
                     </div>
                     <span>•</span>
-                    <span>{gig.pendingOrders} orders in queue</span>
+                    <span>{gig.pendingOrders || 0} orders in queue</span>
                   </div>
                 </div>
                 <div className="text-right">

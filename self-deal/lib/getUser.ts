@@ -28,13 +28,12 @@ export async function getUser() {
   
 
     if (!token) {
-      console.warn("⚠️ No token found in header or cookie");
       return null;
     }
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as TokenPayload;
-    console.log("🔎 Decoded JWT:", decoded);
+  
 
     if (!decoded.userId) {
       return null;
@@ -46,8 +45,6 @@ export async function getUser() {
 
       return null;
     }
-
-    console.log("✅ User fetched:", user);
     return user;
   } catch (err) {
     console.error("❌ getUser error:");

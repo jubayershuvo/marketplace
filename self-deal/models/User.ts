@@ -24,6 +24,7 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   location?: string;
+  responseTime?: string;
 
   // Freelancer fields
   displayName?: string;
@@ -35,6 +36,7 @@ export interface IUser extends Document {
   rating?: number;
   completedOrders?: number;
   earnings?: number;
+  lastDelivery?: string;
 
   // Client fields
   companyName?: string;
@@ -80,6 +82,8 @@ const UserSchema = new Schema<IUser>(
     lockUntil: { type: Date },
     lastLogin: { type: Date },
     lastLoginIp: { type: String },
+    responseTime: { type: String, default: "1 hour" },
+    lastDelivery: { type: String, default: "No deliveries" },
 
     // ---------- Freelancer ----------
     displayName: { type: String, trim: true },
