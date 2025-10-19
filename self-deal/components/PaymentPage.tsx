@@ -8,6 +8,8 @@ import {
   Phone,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
+import axios from "axios";
+import Loading from "./Loading";
 
 interface PaymentPageProps {
   amount?: number;
@@ -27,12 +29,34 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
   const params = useSearchParams();
   const router = useRouter();
   const id = params.get("id");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!id) {
       router.push("/");
     }
   }, []);
+  useEffect(() => {
+    async function getGigInfo() {
+      if (id) {
+        setLoading(true);
+        try {
+          const res = await axios.get(`/api/gig?id=${id}`);
+          setAmount(res.data.gig.price);
+          setLoading(false);
+        } catch (error) {
+          console.log(error);
+          setLoading(false);
+        }
+      }
+    }
+
+    getGigInfo();
+  }, [id]);
+
+  if (loading) {
+    return <Loading />;
+  }
 
   // Payment numbers with proper typing
   const paymentNumbers: Record<"nagad" | "bkash", string> = {
@@ -60,63 +84,62 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
   const handlePaymentSubmit = async (): Promise<void> => {
     if (!selectedMethod || !trxId || !amount || amount <= 0) {
       setPaymentStatus("error");
-      onPaymentError?.("সব তথ্য পূরণ করুন এবং সঠিক পরিমাণ নিশ্চিত করুন");
+      onPaymentError?.("সল তথ্য পূরণ সরুন এলং সঠিনাণ নিশ্চিফ সরুন");
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await fetch("/api/verify-payment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const response = await axios.post(
+        "/api/create-order",
+        {
           paymentMethod: selectedMethod,
           transactionId: trxId,
           amount: amount,
-          phoneNumber: paymentNumbers[selectedMethod],
-        }),
-      });
+          paymentNumber: paymentNumbers[selectedMethod],
+          gigId: id,
+        },
+        { withCredentials: true }
+      );
 
-      if (response.ok) {
+      if (response.status === 200) {
         setPaymentStatus("success");
         setTrxId("");
         onPaymentSuccess?.();
+        router.back();
       } else {
         setPaymentStatus("error");
-        const errorData = await response.json().catch(() => ({}));
         onPaymentError?.(
-          errorData.message || "পেমেন্ট যাচাই করতে সমস্যা হয়েছে"
+          response.data.message || "পেমেন্ট যাচাই সরতে সমস্যা হয়েছে"
         );
       }
     } catch (error) {
       setPaymentStatus("error");
-      onPaymentError?.("নেটওয়ার্ক সমস্যা হয়েছে");
+      onPaymentError?.("Network error. Please try again later.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 py-8 px-4">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="bg-white rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg">
-            <CreditCard className="w-8 h-8 text-indigo-600" />
+          <div className="bg-white dark:bg-gray-800 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg">
+            <CreditCard className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
             পেমেন্ট করুন
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-300">
             নিচের নির্দেশনা অনুসরণ করে পেমেন্ট সম্পূর্ণ করুন
           </p>
         </div>
 
         {/* Payment Method Selection */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
             পেমেন্ট করুন: ৳{(amount || 0).toLocaleString("en-US")}
           </h2>
 
@@ -126,15 +149,17 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
               onClick={() => setSelectedMethod("bkash")}
               className={`p-4 rounded-xl border-2 transition-all ${
                 selectedMethod === "bkash"
-                  ? "border-pink-500 bg-pink-50"
-                  : "border-gray-200 hover:border-pink-300"
+                  ? "border-pink-500 dark:border-pink-400 bg-pink-50 dark:bg-pink-900/20"
+                  : "border-gray-200 dark:border-gray-600 hover:border-pink-300 dark:hover:border-pink-500"
               }`}
             >
               <div className="text-center">
-                <div className="bg-pink-600 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                <div className="bg-pink-600 dark:bg-pink-500 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">bKash</span>
                 </div>
-                <p className="text-sm font-medium text-gray-800">বিকাশ</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-white">
+                  বিকাশ
+                </p>
               </div>
             </button>
 
@@ -143,15 +168,17 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
               onClick={() => setSelectedMethod("nagad")}
               className={`p-4 rounded-xl border-2 transition-all ${
                 selectedMethod === "nagad"
-                  ? "border-orange-500 bg-orange-50"
-                  : "border-gray-200 hover:border-orange-300"
+                  ? "border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20"
+                  : "border-gray-200 dark:border-gray-600 hover:border-orange-300 dark:hover:border-orange-500"
               }`}
             >
               <div className="text-center">
-                <div className="bg-orange-600 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                <div className="bg-orange-600 dark:bg-orange-500 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">নগদ</span>
                 </div>
-                <p className="text-sm font-medium text-gray-800">নগদ</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-white">
+                  নগদ
+                </p>
               </div>
             </button>
           </div>
@@ -161,22 +188,22 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
             <div
               className={`border-2 rounded-xl p-4 mb-6 ${
                 selectedMethod === "bkash"
-                  ? "border-pink-200 bg-pink-50"
-                  : "border-orange-200 bg-orange-50"
+                  ? "border-pink-200 dark:border-pink-800 bg-pink-50 dark:bg-pink-900/10"
+                  : "border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10"
               }`}
             >
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+              <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center">
                 <Phone className="w-5 h-5 mr-2" />
                 পেমেন্ট নির্দেশনা
               </h3>
 
-              <div className="space-y-3 text-sm text-gray-700">
+              <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
                 <p>১. নিচের নম্বরটি কপি করুন</p>
 
                 {/* Copy Number Section */}
-                <div className="bg-white rounded-lg p-3 border">
+                <div className="bg-white dark:bg-gray-700 rounded-lg p-3 border dark:border-gray-600">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-lg font-semibold">
+                    <span className="font-mono text-lg font-semibold dark:text-white">
                       {paymentNumbers[selectedMethod]}
                     </span>
                     <button
@@ -188,10 +215,10 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
                       }
                       className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
                         copiedNumber === selectedMethod
-                          ? "bg-green-100 text-green-700"
+                          ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
                           : selectedMethod === "bkash"
-                          ? "bg-pink-100 text-pink-700 hover:bg-pink-200"
-                          : "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                          ? "bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 hover:bg-pink-200 dark:hover:bg-pink-800"
+                          : "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800"
                       }`}
                     >
                       {copiedNumber === selectedMethod ? (
@@ -228,10 +255,10 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
             <div className="space-y-4">
               {/* Amount Display */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   পেমেন্ট করবেন
                 </label>
-                <div className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl text-lg font-semibold text-gray-800">
+                <div className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-lg font-semibold text-gray-800 dark:text-white">
                   ৳{(amount || 0).toLocaleString("en-US")} টাকা
                 </div>
               </div>
@@ -239,7 +266,7 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
               <div>
                 <label
                   htmlFor="trxId"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                 >
                   ট্রানজেকশন আইডি (TrxID)
                 </label>
@@ -250,10 +277,10 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setTrxId(e.target.value)
                   }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="যেমনঃ 8N5A7X9D2C"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   পেমেন্ট সম্পূর্ণ করার পর যে আইডি পাবেন তা এখানে লিখুন
                 </p>
               </div>
@@ -263,10 +290,10 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
                 disabled={isLoading || !selectedMethod || !trxId}
                 className={`w-full py-3 rounded-xl font-semibold text-white transition-all ${
                   isLoading || !selectedMethod || !trxId
-                    ? "bg-gray-400 cursor-not-allowed"
+                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
                     : selectedMethod === "bkash"
-                    ? "bg-pink-600 hover:bg-pink-700"
-                    : "bg-orange-600 hover:bg-orange-700"
+                    ? "bg-pink-600 dark:bg-pink-700 hover:bg-pink-700 dark:hover:bg-pink-800"
+                    : "bg-orange-600 dark:bg-orange-700 hover:bg-orange-700 dark:hover:bg-orange-800"
                 } focus:ring-4 focus:ring-opacity-50`}
               >
                 {isLoading ? (
@@ -283,10 +310,10 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
 
           {/* Status Messages */}
           {paymentStatus === "success" && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
               <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                <span className="text-green-800 font-medium">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" />
+                <span className="text-green-800 dark:text-green-300 font-medium">
                   পেমেন্ট সফল হয়েছে! ধন্যবাদ।
                 </span>
               </div>
@@ -294,10 +321,10 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
           )}
 
           {paymentStatus === "error" && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
               <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-                <span className="text-red-800 font-medium">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
+                <span className="text-red-800 dark:text-red-300 font-medium">
                   পেমেন্ট যাচাই করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।
                 </span>
               </div>
@@ -306,11 +333,11 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
         </div>
 
         {/* Important Notes */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <h3 className="font-semibold text-yellow-800 mb-2">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+          <h3 className="font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
             গুরুত্বপূর্ণ তথ্য:
           </h3>
-          <ul className="text-sm text-yellow-700 space-y-1">
+          <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
             <li>• পেমেন্ট করার আগে টাকার পরিমাণ ভালো করে দেখে নিন</li>
             <li>• ট্রানজেকশন আইডি সঠিকভাবে দিন</li>
             <li>• কোনো সমস্যা হলে সাপোর্ট টিমের সাথে যোগাযোগ করুন</li>

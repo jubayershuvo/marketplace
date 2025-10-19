@@ -174,7 +174,6 @@ export default function RegisterPage() {
       if (response.ok) {
         dispatch(userLogin(data));
         try {
-          await axios.post("/api/create-otp", { email: formData.email });
           router.push(`/verify-email?email=${formData.email}`);
         } catch (error) {
           setErrors({ submit: "Network error. Please try again." });

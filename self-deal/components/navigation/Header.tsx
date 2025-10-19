@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -8,8 +8,6 @@ import {
   X,
   Bell,
   MessageSquare,
-  Heart,
-  ShoppingCart,
   Plus,
   Star,
   User,
@@ -19,12 +17,7 @@ import {
   Briefcase,
   LucideIcon,
   DollarSign,
-  Users,
-  FileText,
-  Target,
-  TrendingUp,
   Package,
-  BarChart3,
   Wallet,
 } from "lucide-react";
 import ThemeToggle from "../ThemeMod";
@@ -47,7 +40,6 @@ interface UserNavItem {
   label: string;
   href?: string;
   isNotification?: boolean;
-  count?: number;
   userTypes: ("freelancer" | "client")[];
 }
 
@@ -65,7 +57,6 @@ interface MobileItem {
   href?: string;
   isPrimary?: boolean;
   isAction?: boolean;
-  count?: number;
   userTypes: ("freelancer" | "client")[];
 }
 
@@ -78,39 +69,29 @@ interface User {
 }
 
 interface Notification {
-  id: number;
+  _id: number;
   message: string;
-  time: string;
+  createdAt: string;
+  isRead: boolean;
+  href?: string;
 }
 
 // Enhanced Navigation Configuration
 const navData: {
-  categories: string[];
   guestNavItems: NavItem[];
   userNavItems: UserNavItem[];
   userMenuItems: UserMenuItem[];
   mobileGuestItems: NavItem[];
   mobileUserItems: MobileItem[];
 } = {
-  categories: [
-    "Graphics & Design",
-    "Digital Marketing",
-    "Writing & Translation",
-    "Video & Animation",
-    "Music & Audio",
-    "Programming & Tech",
-    "Business",
-    "Lifestyle",
-  ],
-
   // Guest Navigation (not logged in)
   guestNavItems: [
     { label: "Become a Seller", href: "/signup" },
     { label: "Sign in", href: "/login" },
-    { label: "Join", href: "/signup", isPrimary: true },
+    { label: "Join", href: "/signup" },
   ],
 
-  // User Navigation Items (Desktop Icons)
+  // User Navigation Items (Desktop Icons) - NO HARDCODED COUNTS
   userNavItems: [
     // Freelancer-specific items
     {
@@ -122,16 +103,8 @@ const navData: {
     {
       icon: Wallet,
       label: "Earnings",
-      href: "/seller/earnings",
+      href: "/wallet",
       userTypes: ["freelancer"],
-    },
-
-    // Client-specific items
-    {
-      icon: Search,
-      label: "Find Services",
-      href: "/search",
-      userTypes: ["client"],
     },
 
     // Common items for both user types
@@ -145,35 +118,24 @@ const navData: {
       icon: Bell,
       label: "Notifications",
       isNotification: true,
-      count: 3,
       userTypes: ["freelancer", "client"],
     },
     {
       icon: MessageSquare,
       label: "Messages",
       href: "/inbox",
-      count: 2,
       userTypes: ["freelancer", "client"],
-    },
-    {
-      icon: Heart,
-      label: "Lists",
-      href: "/lists",
-      userTypes: ["client"],
     },
   ],
 
   // User Menu Items (Dropdown Menu)
   userMenuItems: [
-    // Common profile item
     {
       icon: User,
       label: "Profile",
       href: "/profile",
       userTypes: ["freelancer", "client"],
     },
-
-    // Freelancer-specific menu items
     {
       icon: Briefcase,
       label: "Gigs",
@@ -183,19 +145,15 @@ const navData: {
     {
       icon: DollarSign,
       label: "Earnings",
-      href: "/seller/earnings",
+      href: "/wallet",
       userTypes: ["freelancer"],
     },
-
-    // Client-specific menu items
     {
       icon: Package,
       label: "Orders",
-      href: "/users/orders",
-      userTypes: ["client"],
+      href: "/orders",
+      userTypes: ["client", "freelancer"],
     },
-
-    // Common settings and logout
     {
       icon: Settings,
       label: "Settings",
@@ -220,12 +178,6 @@ const navData: {
 
   // Mobile User Items
   mobileUserItems: [
-    // Freelancer-specific mobile items
-    {
-      label: "Dashboard",
-      href: "/seller/dashboard",
-      userTypes: ["freelancer"],
-    },
     {
       label: "Create New Gig",
       href: "/new/gig",
@@ -238,30 +190,22 @@ const navData: {
     },
     {
       label: "Earnings",
-      href: "/seller/earnings",
+      href: "/wallet",
       userTypes: ["freelancer"],
     },
-
-    // Client-specific mobile items
-
-    
     {
       label: "My Orders",
-      href: "/users/orders",
-      userTypes: ["client"],
+      href: "/orders",
+      userTypes: ["client", "freelancer"],
     },
-
-    // Common mobile items
     {
       label: "Messages",
       href: "/inbox",
-      count: 2,
       userTypes: ["freelancer", "client"],
     },
     {
       label: "Notifications",
       isAction: true,
-      count: 3,
       userTypes: ["freelancer", "client"],
     },
   ],
@@ -314,6 +258,10 @@ interface IconButtonProps {
   onClick?: () => void;
   showNotifications?: boolean;
   notifications?: Notification[];
+  unReadCount: number;
+  unreadedMessagesCount: number;
+  ordersCount: number;
+  toggleNotifications: () => void;
 }
 
 const IconButton: React.FC<IconButtonProps> = ({
@@ -321,8 +269,38 @@ const IconButton: React.FC<IconButtonProps> = ({
   onClick,
   showNotifications = false,
   notifications = [],
+  unReadCount,
+  unreadedMessagesCount,
+  ordersCount,
+  toggleNotifications,
 }) => {
   const Icon = item.icon;
+  const router = useRouter();
+
+  const formatTime = (timestamp: string): string => {
+    const date = new Date(timestamp);
+    return date.toLocaleString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+  };
+
+  // Determine which count to show based on item label
+  const getItemCount = (): number => {
+    if (item.label === "Messages") {
+      return unreadedMessagesCount;
+    }
+    if (item.label === "Orders") {
+      return ordersCount;
+    }
+    if (item.label === "Notifications") {
+      return unReadCount;
+    }
+    return 0;
+  };
+
+  const itemCount = getItemCount();
 
   if (item.isNotification) {
     return (
@@ -334,9 +312,9 @@ const IconButton: React.FC<IconButtonProps> = ({
           aria-label={item.label}
         >
           <Icon size={20} />
-          {(item.count ?? 0) > 0 && (
+          {unReadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-              {item.count}
+              {unReadCount}
             </span>
           )}
         </button>
@@ -352,14 +330,18 @@ const IconButton: React.FC<IconButtonProps> = ({
               {notifications.length > 0 ? (
                 notifications.map((notif) => (
                   <div
-                    key={notif.id}
-                    className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-l-2 border-l-green-500"
+                    key={notif._id}
+                    className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-l-2 border-l-green-500 cursor-pointer"
+                    onClick={() => {
+                      router.push(notif.href || "/");
+                      toggleNotifications();
+                    }}
                   >
                     <p className="text-sm text-gray-900 dark:text-gray-100">
                       {notif.message}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {notif.time}
+                      {formatTime(notif.createdAt)}
                     </p>
                   </div>
                 ))
@@ -384,9 +366,9 @@ const IconButton: React.FC<IconButtonProps> = ({
         aria-label={item.label}
       >
         <Icon size={20} />
-        {(item.count ?? 0) > 0 && (
+        {itemCount > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-            {item.count}
+            {itemCount}
           </span>
         )}
       </div>
@@ -424,38 +406,89 @@ const FiverrHeader: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [showUserMenu, setShowUserMenu] = useState<boolean>(false);
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
-  const [activeCategory, setActiveCategory] = useState<string>("");
+
   const [isMounted, setIsMounted] = useState<boolean>(false);
+  const [query, setQuery] = useState<string>("");
   const router = useRouter();
   const dispatch = useAppDispatch();
 
   // Get user state from Redux
   const { isLoggedIn, user } = useAppSelector((state) => state.userAuth);
 
+  // State for API counts
+  const [mockNotifications, setMockNotifications] = useState<Notification[]>();
+  const [unReadCount, setUnReadCount] = useState<number>(0);
+  const [unreadedMessagesCount, setUnreadedMessagesCount] = useState<number>(0);
+  const [ordersCount, setOrdersCount] = useState<number>(0);
+
   // Set mounted state to avoid hydration mismatch
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Fetch user profile and counts
   useEffect(() => {
     async function fetchData() {
-      if (isLoggedIn) {
+      if (isLoggedIn && user._id) {
         try {
-          const response = await axios.get(`/api/get-profile?id=${user?._id}`);
+          const response = await axios.get(`/api/get-profile`, {
+            withCredentials: true,
+          });
           dispatch(updateUser(response.data.user));
+          
+          // Set all counts from API
+          setUnreadedMessagesCount(response.data.unreadedMessagesCount || 0);
+          setOrdersCount(response.data.ordersCount || 0);
+          
           if (user.isEmailVerified === false) {
             router.push(`/verify-email?email=${user.email}`);
           } else if (!user.displayName && !user.companyName) {
             router.push(`/complete-profile`);
           }
-        } catch (error) {
-          console.error("Error fetching notifications:", error);
+        } catch (error: unknown) {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error
+          ) {
+            const err = error as { response?: { status?: number } };
+            if (err.response?.status === 401) {
+              handleLogout();
+            }
+          } else if (error instanceof Error) {
+            console.error("Error fetching profile:", error.message);
+          } else if (typeof error === "object" && error !== null) {
+            console.error(
+              "Error fetching profile:",
+              JSON.stringify(error)
+            );
+          } else {
+            console.error("Error fetching profile:", String(error));
+          }
         }
       }
     }
 
     fetchData();
-  }, [isLoggedIn, router]);
+  }, [isLoggedIn]);
+
+  // Fetch notifications
+  useEffect(() => {
+    if (isLoggedIn) {
+      const fetchNotifications = async () => {
+        try {
+          const response = await axios.get(`/api/notifications`, {
+            withCredentials: true,
+          });
+          setMockNotifications(response.data.notifications);
+          setUnReadCount(response.data.unreadCount || 0);
+        } catch (error) {
+          console.error("Error fetching notifications:", error);
+        }
+      };
+      fetchNotifications();
+    }
+  }, [isLoggedIn]);
 
   // Determine user type based on login state and user data
   const getUserType = (): "guest" | "freelancer" | "client" => {
@@ -470,33 +503,6 @@ const FiverrHeader: React.FC = () => {
 
   const userType = getUserType();
   const isGuest = userType === "guest";
-
-  const mockNotifications: Notification[] = [
-    {
-      id: 1,
-      message:
-        userType === "freelancer"
-          ? "New order received for your gig"
-          : "Order status updated",
-      time: "2 minutes ago",
-    },
-    {
-      id: 2,
-      message:
-        userType === "freelancer"
-          ? "Gig approved and live"
-          : "New message from seller",
-      time: "1 hour ago",
-    },
-    {
-      id: 3,
-      message:
-        userType === "freelancer"
-          ? "Buyer left a review"
-          : "Service delivered successfully",
-      time: "3 hours ago",
-    },
-  ];
 
   // Filter navigation items based on user type
   const filteredUserNavItems = !isGuest
@@ -539,9 +545,15 @@ const FiverrHeader: React.FC = () => {
     return () => document.removeEventListener("click", handleClickOutside);
   }, [isMobileMenuOpen]);
 
-  const handleLogout = (): void => {
-    dispatch(userLogout());
-    setShowUserMenu(false);
+  const handleLogout = async () => {
+    try {
+      await axios.get("/api/logout");
+      dispatch(userLogout());
+      setIsMobileMenuOpen(false);
+      router.push("/login");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const toggleMobileMenu = (): void => {
@@ -556,6 +568,11 @@ const FiverrHeader: React.FC = () => {
     setShowNotifications((prev) => !prev);
   };
 
+  const handleSearch = (): void => {
+    if (!query) return;
+    router.push(`/search?q=${query}`);
+  };
+
   // Don't render anything until mounted to avoid hydration mismatch
   if (!isMounted) {
     return (
@@ -564,8 +581,6 @@ const FiverrHeader: React.FC = () => {
       </header>
     );
   }
-
-  // Dynamic search placeholder based on user type
 
   return (
     <>
@@ -601,10 +616,13 @@ const FiverrHeader: React.FC = () => {
                 <div className="relative">
                   <input
                     type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search for gigs..."
                     className="w-full pl-4 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
                   />
                   <button
+                    onClick={handleSearch}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-md transition-colors"
                     type="button"
                     aria-label="Search"
@@ -618,7 +636,7 @@ const FiverrHeader: React.FC = () => {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-6">
               {isGuest ? (
-                // Guest Navigation - Show login/register
+                // Guest Navigation
                 <>
                   {navData.guestNavItems.slice(0, -2).map((item, index) => (
                     <NavItem key={`guest-${index}`} item={item} />
@@ -643,6 +661,10 @@ const FiverrHeader: React.FC = () => {
                       }
                       showNotifications={showNotifications}
                       notifications={mockNotifications}
+                      unReadCount={unReadCount}
+                      unreadedMessagesCount={unreadedMessagesCount}
+                      ordersCount={ordersCount}
+                      toggleNotifications={toggleNotifications}
                     />
                   ))}
 
@@ -744,6 +766,7 @@ const FiverrHeader: React.FC = () => {
                               <Link
                                 key={`user-menu-${index}`}
                                 href={item.href || "#"}
+                                onClick={() => setShowUserMenu(false)}
                               >
                                 <div className="flex items-center space-x-3 px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                   <Icon size={16} />
@@ -803,10 +826,13 @@ const FiverrHeader: React.FC = () => {
             <div className="relative">
               <input
                 type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search..."
                 className="w-full pl-4 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none placeholder-gray-500 dark:placeholder-gray-400"
               />
               <button
+                onClick={handleSearch}
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-md"
                 type="button"
                 aria-label="Search"
@@ -817,30 +843,6 @@ const FiverrHeader: React.FC = () => {
           </div>
         </div>
 
-        {/* Categories Bar (only show for guests and clients) */}
-        {(isGuest || userType === "client") && (
-          <div className="hidden lg:block border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-900">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center space-x-8 h-12 overflow-x-auto">
-                {navData.categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setActiveCategory(category)}
-                    className={`whitespace-nowrap text-sm font-medium transition-colors hover:text-green-600 dark:hover:text-green-400 ${
-                      activeCategory === category
-                        ? "text-green-600 dark:text-green-400 border-b-2 border-green-600 dark:border-green-400"
-                        : "text-gray-700 dark:text-gray-300"
-                    }`}
-                    type="button"
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Mobile Menu */}
         <div
           className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${
@@ -849,7 +851,7 @@ const FiverrHeader: React.FC = () => {
         >
           <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-6">
             {isGuest ? (
-              // Mobile Guest Menu - Show login/register options
+              // Mobile Guest Menu
               <div className="space-y-4">
                 <div className="text-center pb-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
@@ -875,7 +877,7 @@ const FiverrHeader: React.FC = () => {
                 ))}
               </div>
             ) : (
-              // Mobile User Menu - Different content based on user type
+              // Mobile User Menu
               <div className="space-y-4">
                 {/* User Info Header */}
                 <div className="flex items-center space-x-3 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -923,12 +925,6 @@ const FiverrHeader: React.FC = () => {
 
                 {/* User Type Specific Menu Items */}
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-                    {userType === "freelancer"
-                      ? "Seller Dashboard"
-                      : "Buyer Dashboard"}
-                  </div>
-
                   {filteredMobileUserItems.map((item, index) =>
                     item.isAction ? (
                       <button
@@ -938,9 +934,9 @@ const FiverrHeader: React.FC = () => {
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         <span className="font-medium">{item.label}</span>
-                        {(item.count ?? 0) > 0 && (
+                        {unReadCount > 0 && (
                           <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                            {item.count}
+                            {unReadCount}
                           </span>
                         )}
                       </button>
@@ -952,9 +948,14 @@ const FiverrHeader: React.FC = () => {
                       >
                         <div className="flex items-center justify-between py-3 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 transition-colors">
                           <span className="font-medium">{item.label}</span>
-                          {(item.count ?? 0) > 0 && (
+                          {item.label === "Messages" && unreadedMessagesCount > 0 && (
                             <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                              {item.count}
+                              {unreadedMessagesCount}
+                            </span>
+                          )}
+                          {item.label === "My Orders" && ordersCount > 0 && (
+                            <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                              {ordersCount}
                             </span>
                           )}
                         </div>
@@ -969,14 +970,20 @@ const FiverrHeader: React.FC = () => {
                     Account
                   </div>
 
-                  <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link
+                    href="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     <div className="flex items-center space-x-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 transition-colors">
                       <User size={18} />
                       <span>Profile</span>
                     </div>
                   </Link>
 
-                  <Link href="/settings" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     <div className="flex items-center space-x-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 transition-colors">
                       <Settings size={18} />
                       <span>Settings</span>
@@ -984,16 +991,7 @@ const FiverrHeader: React.FC = () => {
                   </Link>
 
                   <button
-                    onClick={async () => {
-                      try {
-                        await axios.get("/api/logout");
-                        handleLogout();
-                        setIsMobileMenuOpen(false);
-                        router.push("/login");
-                      } catch (error) {
-                        console.log(error);
-                      }
-                    }}
+                    onClick={() => handleLogout()}
                     className="flex items-center space-x-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg px-2 transition-colors w-full text-left"
                     type="button"
                   >

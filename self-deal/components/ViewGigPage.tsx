@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Star,
-  Heart,
   Share2,
   MessageCircle,
   Shield,
@@ -16,10 +15,12 @@ import {
   ThumbsUp,
   Flag,
   X,
+  AlertCircle,
 } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loading from "./Loading";
+import { useAppSelector } from "@/lib/hooks";
 
 // -------- Types --------
 interface Language {
@@ -89,22 +90,49 @@ interface Gig {
   isLiked: boolean;
 }
 
-const ViewGigPage = () => {
-  const [gig, setGig] = useState<Gig | null>(null); // Using first gig for demo
+const ViewGigPage = ({ id }: { id: string }) => {
+  const [gig, setGig] = useState<Gig | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
+  const { user } = useAppSelector((state) => state.userAuth);
+  const [domain, setDomain] = useState("");
 
-  const params = useParams();
-  const router = useRouter();
-
-  // Get the id from params
-  const id = params?.id;
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: gig?.title,
+          text: "Check out this gig on SelfDeal!",
+          url: domain + `/gig/${gig?._id}`,
+        })
+        .catch((error) => console.error("Error sharing", error));
+    } else if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.clipboard !== "undefined"
+    ) {
+      // Fallback for browsers that do not support the Web Share API
+      navigator.clipboard
+        ?.writeText(domain + `/gig/${gig?._id}`)
+        .then(() => {
+          alert("Gig URL copied to clipboard!");
+        })
+        .catch((error) => console.error("Error copying to clipboard", error));
+    } else {
+      alert("Sorry, copying to clipboard is not supported on this device.");
+    }
+  };
 
   useEffect(() => {
-    async function fetchGig() {
+    if (typeof window !== "undefined") {
+      setDomain(window.location.origin);
+    }
+  }, []);
+  const router = useRouter();
+
+  useEffect(() => {
+    async function fetchData() {
       if (!id) {
         router.push("/");
         return;
@@ -112,8 +140,9 @@ const ViewGigPage = () => {
 
       try {
         setLoading(true);
-        const res = await axios.get(`/api/gig?id=${id}`);
-        setGig(res.data.gig);
+        // Fetch gig data
+        const gigRes = await axios.get(`/api/gig?id=${id}`);
+        setGig(gigRes.data.gig);
       } catch (error) {
         console.error("Failed to fetch gig:", error);
         setGig(null);
@@ -122,8 +151,9 @@ const ViewGigPage = () => {
       }
     }
 
-    fetchGig();
+    fetchData();
   }, [id, router]);
+
   if (loading) {
     return <Loading />;
   }
@@ -140,6 +170,7 @@ const ViewGigPage = () => {
   }
 
   const formatBDT = (amount: number) => `৳${amount.toLocaleString("en-BD")}`;
+  const isFreelancer = user?.userType === "freelancer";
 
   const nextImage = () => {
     setSelectedImageIndex((prev) => (prev + 1) % gig.images.length);
@@ -161,6 +192,14 @@ const ViewGigPage = () => {
     return new Intl.DateTimeFormat("en-US", dateOptions)
       .format(date)
       .replace(/\s/g, " "); // Fix date formatting
+  };
+
+  const handleBuyNow = () => {
+    if (isFreelancer) {
+      return; // Prevent freelancers from ordering
+    }
+    // Handle buy now logic here
+    router.push(`/payment?id=${gig._id}`);
   };
 
   return (
@@ -203,19 +242,9 @@ const ViewGigPage = () => {
                 )}
                 <div className="absolute top-4 right-4 flex space-x-2">
                   <button
-                    onClick={() => setIsLiked(!isLiked)}
-                    className={`p-2 rounded-full backdrop-blur-sm ${
-                      isLiked
-                        ? "bg-red-500 text-white"
-                        : "bg-white/80 text-gray-700 hover:bg-white"
-                    } transition-colors`}
+                    onClick={handleShare}
+                    className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white transition-colors"
                   >
-                    <Heart
-                      size={20}
-                      className={isLiked ? "fill-current" : ""}
-                    />
-                  </button>
-                  <button className="p-2 rounded-full bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white transition-colors">
                     <Share2 size={20} />
                   </button>
                 </div>
@@ -510,16 +539,35 @@ const ViewGigPage = () => {
                   ))}
                 </div>
 
+                {/* Freelancer restriction notice */}
+                {isFreelancer && (
+                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span className="text-sm text-amber-700 dark:text-amber-300">
+                        Freelancers cannot place orders
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-3">
-                  <button className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors">
-                    Continue ({formatBDT(gig.price)})
-                  </button>
-                  <button
-                    onClick={() => setShowContactForm(!showContactForm)}
-                    className="w-full py-3 border border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 font-semibold rounded-lg transition-colors"
-                  >
-                    Contact Seller
-                  </button>
+                  {!isFreelancer ? (
+                    <button
+                      onClick={handleBuyNow}
+                      className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Order Now ({formatBDT(gig.price)})
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-semibold rounded-lg cursor-not-allowed"
+                    >
+                      Order Now ({formatBDT(gig.price)})
+                    </button>
+                  )}
+  
                 </div>
 
                 <div className="mt-4 text-center">
@@ -530,6 +578,7 @@ const ViewGigPage = () => {
                 </div>
               </div>
             </div>
+
             {/* Seller Info */}
             <div className="bg-white relative dark:bg-gray-800 rounded-lg shadow-sm p-6">
               <div className="flex items-center space-x-4 mb-4">
@@ -544,7 +593,7 @@ const ViewGigPage = () => {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-90 dark:text-gray-100">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                     {gig.freelancer.displayName}
                   </h3>
                   <p className="text-sm text-green-600 dark:text-green-400">
@@ -605,49 +654,12 @@ const ViewGigPage = () => {
                 >
                   View Profile
                 </Link>
-                <button className="w-full py-2 border border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 font-medium rounded-lg transition-colors flex items-center justify-center space-x-1">
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Contact Me</span>
-                </button>
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Contact Form Modal */}
-      {showContactForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Contact Seller
-              </h3>
-              <button
-                onClick={() => setShowContactForm(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Message
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  rows={4}
-                  placeholder="Tell the seller about your project..."
-                />
-              </div>
-              <button className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors">
-                Send Message
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile Bottom Action Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 z-50">
@@ -661,25 +673,21 @@ const ViewGigPage = () => {
             </div>
           </div>
           <div className="flex space-x-2">
-            <button
-              onClick={() => setIsLiked(!isLiked)}
-              className={`p-3 rounded-lg ${
-                isLiked
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-              } transition-colors`}
-            >
-              <Heart size={20} className={isLiked ? "fill-current" : ""} />
-            </button>
-            <button
-              onClick={() => setShowContactForm(!showContactForm)}
-              className="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
-            >
-              Contact
-            </button>
-            <button className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors">
-              Order Now
-            </button>
+            {!isFreelancer ? (
+              <button
+                onClick={handleBuyNow}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Order Now
+              </button>
+            ) : (
+              <button
+                disabled
+                className="px-6 py-3 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-semibold rounded-lg cursor-not-allowed"
+              >
+                Order Now
+              </button>
+            )}
           </div>
         </div>
       </div>

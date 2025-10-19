@@ -1,5 +1,5 @@
 // models/User.ts
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model, ObjectId } from "mongoose";
 import bcrypt from "bcryptjs";
 
 export interface IUser extends Document {
@@ -25,8 +25,14 @@ export interface IUser extends Document {
   updatedAt: Date;
   location?: string;
   responseTime?: string;
+  lastSeen?: Date;
 
   // Freelancer fields
+  withdrawableBalance?: number;
+  balance?: number;
+  pendingBalance?: number;
+
+  pendingOrders?: number;
   displayName?: string;
   description?: string;
   skills?: string[];
@@ -34,9 +40,11 @@ export interface IUser extends Document {
   education?: string[];
   certifications?: string[];
   rating?: number;
-  completedOrders?: number;
+  completedOrders: number;
   earnings?: number;
   lastDelivery?: string;
+  reviews?: ObjectId[];
+  reviewsCount?: number;
 
   // Client fields
   companyName?: string;
@@ -84,17 +92,23 @@ const UserSchema = new Schema<IUser>(
     lastLoginIp: { type: String },
     responseTime: { type: String, default: "1 hour" },
     lastDelivery: { type: String, default: "No deliveries" },
+    lastSeen: { type: Date, default: Date.now },
 
     // ---------- Freelancer ----------
+    withdrawableBalance: { type: Number, default: 0 },
+    balance: { type: Number, default: 0 },
+    pendingBalance: { type: Number, default: 0 },
     displayName: { type: String, trim: true },
     description: { type: String, maxlength: 2000 },
     skills: [{ type: String }],
     languages: [{ type: String }],
     education: [{ type: String }],
     certifications: [{ type: String }],
-    rating: { type: Number, default: 0, min: 0, max: 5 },
+    rating: { type: Number, default: 2, min: 2, max: 5 },
     completedOrders: { type: Number, default: 0 },
     earnings: { type: Number, default: 0 },
+    reviews: [{ type: Schema.Types.ObjectId, ref: "Review" }],
+    reviewsCount: { type: Number, default: 0 },
 
     // ---------- Client ----------
     companyName: { type: String, trim: true },

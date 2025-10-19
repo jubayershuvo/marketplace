@@ -9,23 +9,13 @@ export interface Stats {
   memberSince: string;
 }
 
-export interface Profile {
-  name: string;
-  title: string;
-  img: string;
-  location: string;
-  rating: number;
-  reviews: number;
-  bio: string;
-  skills: string[];
-  stats: Stats;
-}
-
 export interface Gig {
-  id: number;
+  _id: string;
   title: string;
   price: number; // BDT
-  img: string;
+  images: string[];
+  freelancer: User;
+  
 }
 
 export interface PortfolioItem {
@@ -43,7 +33,7 @@ export interface Review {
 }
 
 export interface ProfileData {
-  profile: Profile;
+  profile: User;
   gigs: Gig[];
   portfolio: PortfolioItem[];
   reviews: Review[];
@@ -74,7 +64,13 @@ export interface User {
   languages: string[];
   lastLogin: string;
   lastLoginIp: string;
-  portfolio: string[];
+  location: string;
+  memberSince: string;
+  ordersCount: number;
+  pendingBalance: number;
+  pendingOrders: number;
+  responseTime: string;
+  reviewsCount: number;
   rating: number;
   skills: string[];
   spent: number;

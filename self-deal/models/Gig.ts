@@ -36,6 +36,12 @@ export interface IGig extends Document {
   faq: Types.DocumentArray<IFAQ>;
   createdAt: Date;
   updatedAt: Date;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  orders: number;
+  revenue: number;
+  avgRating: number;
   
 }
 
@@ -76,6 +82,12 @@ const gigSchema = new Schema<IGig>(
 
     reviews: [reviewSchema],
     faq: [faqSchema],
+    impressions: { type: Number, default: 0, min: 0 },
+    clicks: { type: Number, default: 0, min: 0 },
+    conversions: { type: Number, default: 0, min: 0 },
+    orders: { type: Number, default: 0, min: 0 },
+    revenue: { type: Number, default: 0, min: 0 },
+    avgRating: { type: Number, default: 0, min: 0 },
   },
   { timestamps: true }
 );

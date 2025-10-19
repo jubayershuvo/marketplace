@@ -1,197 +1,611 @@
 "use client";
-import { ProfileData } from "@/types/Profile";
-import { MapPin, Star } from "lucide-react";
+import { useEffect, useState } from "react";
+import { MapPin, Star, Edit2, Save, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAppSelector } from "@/lib/hooks";
+import Loading from "./Loading";
+import axios from "axios";
 
-// All Data in one JSON
-const data:ProfileData = {
-  profile: {
-    name: "John Doe",
-    title: "Full-Stack MERN Developer",
-    img: "https://i.pravatar.cc/150?img=7",
-    location: "Dhaka, Bangladesh",
-    rating: 4.9,
-    reviews: 120,
-    bio: "I am a passionate MERN Stack Developer with 3+ years of experience building scalable web apps. Skilled in React, Next.js, Node.js, and MongoDB.",
-    skills: ["React", "Next.js", "Node.js", "MongoDB", "Tailwind", "TypeScript"],
-    stats: {
-      completed: 85,
-      pending: 5,
-      canceled: 2,
-      gigs: 6,
-      responseTime: "1 hour",
-      memberSince: "2021",
-    },
-  },
-  gigs: [
-    {
-      id: 1,
-      title: "I will build a responsive MERN stack website",
-      price: 25000,
-      img: "https://www.rlogical.com/wp-content/uploads/2020/12/MERN.webp",
-    },
-    {
-      id: 2,
-      title: "I will create a professional portfolio website",
-      price: 15000,
-      img: "https://marketplace.canva.com/EAFwckKNjDE/2/0/800w/canva-black-white-grayscale-portfolio-presentation-CFoKUfCMgq0.jpg",
-    },
-    {
-      id: 3,
-      title: "I will develop a secure REST API with Node.js",
-      price: 20000,
-      img: "https://assets.toptal.io/images?url=https%3A%2F%2Fbs-uploads.toptal.io%2Fblackfish-uploads%2Fcomponents%2Fblog_post_page%2F4085508%2Fcover_image%2Fregular_1708x683%2Fcover-secure-rest-api-in-nodejs-80fb5c435d64e62d270b46dc5618d74e.png",
-    },
-  ],
-  portfolio: [
-    {
-      id: 1,
-      title: "E-commerce Website",
-      img: "https://cdn.dribbble.com/userupload/23744972/file/original-f09ad4491cf30c1628e68083ad7d12ad.jpg?format=webp&resize=400x300&vertical=center",
-    },
-    {
-      id: 2,
-      title: "Social Media App",
-      img: "https://img.freepik.com/free-photo/social-media-marketing-concept-marketing-with-applications_23-2150063163.jpg?t=st=1758088931~exp=1758092531~hmac=db959c36ece40f1dc77b2ee2d14c5975b90788e647bc8c59b89b85e50f42671e&w=1480",
-    },
-    {
-      id: 3,
-      title: "Portfolio Website",
-      img: "https://repository-images.githubusercontent.com/279903174/e6d970ed-8a4d-42fa-9f16-0b7efc34fb95",
-    },
-  ],
-  reviews: [
-    {
-      id: 1,
-      client: "Sarah Lee",
-      img: "https://i.pravatar.cc/100?img=12",
-      rating: 5,
-      text: "Amazing developer! Delivered everything before deadline and exceeded expectations.",
-    },
-    {
-      id: 2,
-      client: "David Wilson",
-      img: "https://i.pravatar.cc/100?img=14",
-      rating: 5,
-      text: "Great communication, very professional and skilled.",
-    },
-  ],
-};
+// Type definitions
+interface Gig {
+  _id: string;
+  title: string;
+  images: string[];
+  price: number;
+}
 
-export default function Profile() {
-  const { profile, gigs, portfolio, reviews } = data;
+interface Review {
+  _id: string;
+  client: string;
+  img: string;
+  rating: number;
+  text: string;
+}
+
+interface BaseProfile {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  avatar: string;
+  location: string;
+  userType: "freelancer" | "client";
+  createdAt: string;
+}
+
+interface FreelancerProfile extends BaseProfile {
+  displayName?: string;
+  description?: string;
+  skills?: string[];
+  rating?: number;
+  completedOrders?: number;
+  responseTime?: string;
+  gigs?: Gig[];
+  reviews?: Review[];
+}
+
+interface ClientProfile extends BaseProfile {
+  companyName?: string;
+  companyDescription?: string;
+  spent?: number;
+}
+
+type Profile = FreelancerProfile | ClientProfile;
+
+// Type guards
+function isFreelancer(profile: Profile): profile is FreelancerProfile {
+  return profile.userType === "freelancer";
+}
+
+function isClient(profile: Profile): profile is ClientProfile {
+  return profile.userType === "client";
+}
+
+// Helper type for array fields
+type ArrayField<T> = {
+  [K in keyof T]: T[K] extends string[] ? K : never;
+}[keyof T];
+
+type ProfileArrayField = ArrayField<Profile>;
+
+// Union of all editable fields across all profile types
+type EditableField =
+  | keyof BaseProfile
+  | keyof FreelancerProfile
+  | keyof ClientProfile;
+
+// Exclude non-editable fields
+type ExcludedFields =
+  | "_id"
+  | "userType"
+  | "gigs"
+  | "reviews"
+  | "rating"
+  | "completedOrders"
+  | "responseTime"
+  | "spent";
+type AllowedEditableField = Exclude<EditableField, ExcludedFields>;
+
+export default function Profile({ id }: { id: string }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState<Profile>({
+    _id: "",
+    firstName: "",
+    lastName: "",
+    avatar: "",
+    location: "",
+    userType: "freelancer",
+    createdAt: "",
+  });
+  const [editForm, setEditForm] = useState<Profile>(profile);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  // Hooks
+  const { user } = useAppSelector((state) => state.userAuth);
+  const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+    if (user?._id === id || user.username === id) {
+      router.push("/profile");
+    }
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(
+          id ? `/api/get-profile?id=${id}` : "/api/get-profile",
+          { withCredentials: true }
+        );
+        const data = response.data;
+        const userData = data.user;
+        setProfile(userData);
+        setEditForm(userData);
+      } catch (error: unknown) {
+        console.error("Error fetching data:", error);
+
+        if (error && typeof error === "object" && "response" in error) {
+          const err = error as { response?: { status?: number } };
+          if (err.response?.status === 401) {
+            router.push("/login");
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, router, user._id, user?.username]);
+
+  if (!mounted) {
+    return null;
+  }
+
+  if (loading) {
+    return <Loading />;
+  }
+
+  const getYear = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.getFullYear();
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.put("/api/users/update", editForm, {
+        withCredentials: true,
+      });
+
+      if (response.status !== 200) {
+        throw new Error("Failed to update profile");
+      }
+
+      const result = response.data;
+
+      if (result.success) {
+        setProfile(response.data.user);
+        setIsEditing(false);
+        console.log("Profile updated successfully");
+      } else {
+        throw new Error(result.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditForm(profile);
+    setIsEditing(false);
+  };
+
+  const handleArrayAdd = (field: ProfileArrayField, value: string) => {
+    if (value.trim()) {
+      setEditForm((prev) => {
+        const currentArray = (prev[field] as string[]) || [];
+        return {
+          ...prev,
+          [field]: [...currentArray, value.trim()],
+        };
+      });
+    }
+  };
+
+  const handleArrayRemove = (field: ProfileArrayField, index: number) => {
+    setEditForm((prev) => {
+      const currentArray = (prev[field] as string[]) || [];
+      return {
+        ...prev,
+        [field]: currentArray.filter((_, i) => i !== index),
+      };
+    });
+  };
+
+  const handleInputChange = (field: AllowedEditableField, value: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const canEdit = user && profile._id === user._id;
 
   return (
     <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
-
       {/* Profile Header */}
       <section className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
           <img
-            src={profile.img}
-            alt={profile.name}
+            src={profile.avatar || "/api/placeholder/128/128"}
+            alt={`${profile.firstName} ${profile.lastName}`}
             className="w-32 h-32 rounded-full border-4 border-green-600"
           />
           <div className="flex-1 text-center md:text-left">
-            <h2 className="text-3xl font-bold">{profile.name}</h2>
-            <p className="text-green-600 font-semibold">{profile.title}</p>
-            <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
-              <Star className="text-yellow-500 fill-yellow-500" size={18} />
-              <span>{profile.rating} ({profile.reviews} reviews)</span>
-            </div>
-            <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400">
-              <MapPin size={16} /> {profile.location}
-            </div>
-            <button className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-              Hire Me
-            </button>
+            {isEditing ? (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editForm.firstName}
+                    onChange={(e) =>
+                      handleInputChange("firstName", e.target.value)
+                    }
+                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    placeholder="First Name"
+                  />
+                  <input
+                    type="text"
+                    value={editForm.lastName}
+                    onChange={(e) =>
+                      handleInputChange("lastName", e.target.value)
+                    }
+                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    placeholder="Last Name"
+                  />
+                </div>
+
+                {isFreelancer(editForm) ? (
+                  <input
+                    type="text"
+                    value={editForm.displayName || ""}
+                    onChange={(e) =>
+                      handleInputChange("displayName", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    placeholder="Professional Title"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={isClient(editForm) ? editForm.companyName || "" : ""}
+                    onChange={(e) =>
+                      handleInputChange("companyName", e.target.value)
+                    }
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    placeholder="Company Name"
+                  />
+                )}
+
+                <input
+                  type="text"
+                  value={editForm.location}
+                  onChange={(e) =>
+                    handleInputChange("location", e.target.value)
+                  }
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                  placeholder="Location"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  >
+                    <Save size={16} /> Save
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center gap-2"
+                  >
+                    <X size={16} /> Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-bold">
+                  {profile.firstName} {profile.lastName}
+                </h2>
+                <p className="text-green-600 font-semibold">
+                  {isFreelancer(profile)
+                    ? profile.displayName ||
+                      `${profile.firstName} ${profile.lastName}`
+                    : profile.companyName ||
+                      `${profile.firstName} ${profile.lastName}`}
+                </p>
+
+                {isFreelancer(profile) && (
+                  <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
+                    <Star
+                      className="text-yellow-500 fill-yellow-500"
+                      size={18}
+                    />
+                    <span>
+                      {profile.rating || 0} ({profile.reviews?.length || 0}{" "}
+                      reviews)
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400 md:text-center">
+                  <MapPin size={16} /> {profile.location}
+                </div>
+                {canEdit && (
+                  <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400 md:text-center">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                    >
+                      <Edit2 size={16} /> Edit Profile
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </section>
 
       {/* Stats */}
       <section className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center border-t dark:border-gray-800">
-        {Object.entries(profile.stats).map(([key, value], i) => (
-          <div key={i} className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-            <p className="text-2xl font-bold text-green-600">{value}</p>
-            <p className="capitalize text-sm text-gray-600 dark:text-gray-400">{key}</p>
-          </div>
-        ))}
+        {isFreelancer(profile) ? (
+          <>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {profile.completedOrders || 0}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                completed
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">5</p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                pending
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">2</p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                canceled
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {profile.gigs?.length || 0}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                gigs
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {profile.responseTime || "N/A"}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                response time
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {getYear(profile.createdAt)}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                member since
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {isClient(profile) ? profile.spent || 0 : 0}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                total spent
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">12</p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                active projects
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">4.8</p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                avg rating
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">8</p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                completed
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {getYear(profile.createdAt)}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                member since
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">15</p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                reviews given
+              </p>
+            </div>
+          </>
+        )}
       </section>
 
       {/* About */}
       <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-        <h3 className="text-xl font-bold mb-3">About Me</h3>
-        <p className="text-gray-600 dark:text-gray-400">{profile.bio}</p>
+        <h3 className="text-xl font-bold mb-3">
+          {isFreelancer(profile) ? "About Me" : "About Company"}
+        </h3>
+        {isEditing ? (
+          <textarea
+            value={
+              isFreelancer(editForm)
+                ? editForm.description || ""
+                : isClient(editForm)
+                ? editForm.companyDescription || ""
+                : ""
+            }
+            onChange={(e) =>
+              handleInputChange(
+                (isFreelancer(editForm)
+                  ? "description"
+                  : "companyDescription") as AllowedEditableField,
+                e.target.value
+              )
+            }
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 h-32 resize-none"
+            placeholder={
+              isFreelancer(editForm)
+                ? "Tell clients about yourself..."
+                : "Describe your company..."
+            }
+          />
+        ) : (
+          <p className="text-gray-600 dark:text-gray-400">
+            {isFreelancer(profile)
+              ? profile.description || "No description provided."
+              : isClient(profile)
+              ? profile.companyDescription || "No company description provided."
+              : "No description provided."}
+          </p>
+        )}
       </section>
 
-      {/* Skills */}
-      <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-        <h3 className="text-xl font-bold mb-3">Skills</h3>
-        <div className="flex flex-wrap gap-3">
-          {profile.skills.map((skill, i) => (
-            <span key={i} className="px-4 py-2 rounded-full border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm">
-              {skill}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* Gigs */}
-      <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-        <h3 className="text-xl font-bold mb-3">My Gigs</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {gigs.map((gig) => (
-            <div key={gig.id} className="rounded-xl overflow-hidden shadow hover:shadow-lg bg-white dark:bg-gray-800">
-              <img src={gig.img} alt={gig.title} className="w-full h-40 object-cover" />
-              <div className="p-4">
-                <h4 className="font-bold">{gig.title}</h4>
-                <p className="text-green-600 font-semibold mt-2">৳ {gig.price.toLocaleString()}</p>
-                <button className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  Order Now
-                </button>
+      {/* Skills - Only for Freelancers */}
+      {isFreelancer(profile) && (
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Skills</h3>
+          {isEditing ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {isFreelancer(editForm) &&
+                  editForm.skills?.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm flex items-center gap-2"
+                    >
+                      {skill}
+                      <button
+                        onClick={() =>
+                          handleArrayRemove(
+                            "skills" as ProfileArrayField,
+                            index
+                          )
+                        }
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  ))}
               </div>
+              <input
+                type="text"
+                placeholder="Add a skill (press Enter)"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleArrayAdd(
+                      "skills" as ProfileArrayField,
+                      e.currentTarget.value
+                    );
+                    e.currentTarget.value = "";
+                  }
+                }}
+              />
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Portfolio */}
-      <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-        <h3 className="text-xl font-bold mb-3">Portfolio</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {portfolio.map((p) => (
-            <div key={p.id} className="rounded-xl overflow-hidden shadow hover:shadow-lg bg-white dark:bg-gray-800">
-              <img src={p.img} alt={p.title} className="w-full h-40 object-cover" />
-              <div className="p-4">
-                <h4 className="font-bold">{p.title}</h4>
-              </div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {isFreelancer(profile) &&
+                profile.skills?.map((skill, i) => (
+                  <span
+                    key={i}
+                    className="px-4 py-2 rounded-full border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              {isFreelancer(profile) &&
+                (!profile.skills || profile.skills.length === 0) && (
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No skills added yet.
+                  </p>
+                )}
             </div>
-          ))}
-        </div>
-      </section>
+          )}
+        </section>
+      )}
 
-      {/* Reviews */}
-      <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-        <h3 className="text-xl font-bold mb-3">Client Reviews</h3>
-        <div className="space-y-6">
-          {reviews.map((r) => (
-            <div key={r.id} className="p-6 rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 shadow">
-              <div className="flex items-center gap-4">
-                <img src={r.img} alt={r.client} className="w-12 h-12 rounded-full" />
-                <div>
-                  <h4 className="font-bold">{r.client}</h4>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    {Array.from({ length: r.rating }).map((_, i) => (
-                      <Star key={i} size={16} className="fill-yellow-500" />
-                    ))}
-                  </div>
+      {/* Gigs - Only for Freelancers */}
+      {isFreelancer(profile) && profile.gigs && profile.gigs.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">My Gigs</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {profile.gigs.map((gig) => (
+              <div
+                key={gig._id}
+                className="rounded-xl overflow-hidden shadow hover:shadow-lg bg-white dark:bg-gray-800"
+              >
+                <img
+                  src={gig.images[0] || "/api/placeholder/300/160"}
+                  alt={gig.title}
+                  className="w-full h-40 object-cover"
+                />
+                <div className="p-4">
+                  <h4 className="font-bold">{gig.title}</h4>
+                  <p className="text-green-600 font-semibold mt-2">
+                    ৳ {gig.price.toLocaleString()}
+                  </p>
+                  <button className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    Order Now
+                  </button>
                 </div>
               </div>
-              <p className="mt-3 text-gray-600 dark:text-gray-400">{r.text}</p>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Reviews - Only for Freelancers */}
+      {isFreelancer(profile) &&
+        profile.reviews &&
+        profile.reviews.length > 0 && (
+          <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+            <h3 className="text-xl font-bold mb-3">Client Reviews</h3>
+            <div className="space-y-6">
+              {profile.reviews.map((r) => (
+                <div
+                  key={r._id}
+                  className="p-6 rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 shadow"
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={r.img}
+                      alt={r.client}
+                      className="w-12 h-12 rounded-full"
+                    />
+                    <div>
+                      <h4 className="font-bold">{r.client}</h4>
+                      <div className="flex items-center gap-1 text-yellow-500">
+                        {Array.from({ length: r.rating }).map((_, i) => (
+                          <Star key={i} size={16} className="fill-yellow-500" />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-gray-600 dark:text-gray-400">
+                    {r.text}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+        )}
     </div>
   );
 }

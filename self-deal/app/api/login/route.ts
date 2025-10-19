@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/mongodb";
 import User, { IUser } from "@/models/User";
-import { generateOtp } from "@/lib/otp";
+import sendOTPEmail from "@/lib/emailOtp";
 
 // Rate limiting store (for demo; use Redis in production)
 const rateLimitStore = new Map<string, number[]>();
@@ -39,13 +39,9 @@ export const generateTokens = (
 ) => {
   const payload = { userId, email, type: "access" } as const;
 
-  const accessToken = jwt.sign(
-    payload,
-    process.env.JWT_SECRET!,
-    {
-      expiresIn: rememberMe ? "30d" : "1d",
-    }
-  );
+  const accessToken = jwt.sign(payload, process.env.JWT_SECRET!, {
+    expiresIn: rememberMe ? "30d" : "1d",
+  });
 
   const refreshToken = jwt.sign(
     { ...payload, type: "refresh" },
@@ -168,8 +164,11 @@ export async function POST(req: NextRequest) {
     );
 
     if (!userWithoutPassword?.isEmailVerified) {
-      const otp = generateOtp(user.email);
-      console.log(otp);
+      await sendOTPEmail({
+        to: user.email,
+        userName: user.username,
+        expiryMinutes: 10,
+      });
     }
 
     const responseBody = {

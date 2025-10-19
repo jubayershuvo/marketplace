@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import Gig from "@/models/Gig";
 import { connectDB } from "@/lib/mongodb";
 import { getUser } from "@/lib/getUser";
+import { NotificationModel } from "@/models/Notification";
 
 // Convert File to Base64
 async function fileToBase64(file: File) {
@@ -81,6 +82,12 @@ export async function POST(req: NextRequest) {
     });
 
     await gig.save();
+
+    await NotificationModel.create({
+      user: freelancerId,
+      message: `Your gig "${title}" has been created successfully.`,
+      href: `/gig/${gig._id}`,
+    });
 
     return NextResponse.json({
       success: true,

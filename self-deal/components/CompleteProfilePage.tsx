@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import CompleteFreelancerAccount from "./CompleteFreelancerAccount";
 import { User } from "@/types/Profile";
 import { useRouter } from "next/navigation";
+import CompleteClientAccount from "./CompleteClientAccount";
 
 function CompleteProfilePage() {
   const userAuth = useAppSelector((state) => state.userAuth);
@@ -21,11 +22,7 @@ function CompleteProfilePage() {
   return (
     <>
       {user?.userType === "freelancer" && <CompleteFreelancerAccount />}
-      {user?.userType === "client" && (
-        <div className="min-h-screen">
-          <h1>Complete Client Profile</h1>
-        </div>
-      )}
+      {user?.userType === "client" && <CompleteClientAccount />}
     </>
   );
 }

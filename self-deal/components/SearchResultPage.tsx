@@ -1,63 +1,42 @@
 "use client";
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Star } from "lucide-react";
 import Link from "next/link";
-
-// Dummy gigs data with freelancer info
-const gigs = [
-  {
-    id: 1,
-    title: "Build a full-stack MERN web application",
-    price: 15000,
-    img: "https://source.unsplash.com/400x300/?code,developer",
-    freelancer: {
-      name: "John Doe",
-      avatar: "https://i.pravatar.cc/150?img=7",
-      location: "Dhaka, Bangladesh",
-      rating: 4.9,
-      reviews: 120,
-    },
-  },
-  {
-    id: 2,
-    title: "Design a modern UI/UX for your website",
-    price: 10000,
-    img: "https://source.unsplash.com/400x300/?design,uiux",
-    freelancer: {
-      name: "Sarah Lee",
-      avatar: "https://i.pravatar.cc/150?img=5",
-      location: "New York, USA",
-      rating: 4.8,
-      reviews: 95,
-    },
-  },
-  {
-    id: 3,
-    title: "Create a scalable Node.js backend API",
-    price: 12000,
-    img: "https://source.unsplash.com/400x300/?backend,nodejs",
-    freelancer: {
-      name: "David Wilson",
-      avatar: "https://i.pravatar.cc/150?img=10",
-      location: "London, UK",
-      rating: 4.7,
-      reviews: 80,
-    },
-  },
-];
+import axios from "axios";
+import { Gig } from "@/types/Profile";
+import Loading from "./Loading";
 
 export default function SearchResultPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>(query);
+  const [filtered, setGigs] = useState<Gig[]>([]);
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   // Filter gigs by title or freelancer name
-  const filtered = gigs.filter(
-    (g) =>
-      g.title.toLowerCase().includes(query.toLowerCase()) ||
-      g.freelancer.name.toLowerCase().includes(query.toLowerCase())
-  );
+  useEffect(() => {
+    const url = `/api/search?q=${query}`;
+    const fetchGigs = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(url);
+        setGigs(res.data.gigs);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching gigs:", error);
+        setLoading(false);
+      }
+    };
+
+    if (query) {
+      fetchGigs();
+    }
+  }, [query]);
+  if (loading) {
+    return <Loading />;
+  };
 
   const formatBDT = (amount: number) => `৳${amount.toLocaleString("en-BD")}`;
 
@@ -96,12 +75,12 @@ export default function SearchResultPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((g) => (
             <div
-              key={g.id}
+              key={g._id}
               className="rounded-2xl shadow bg-white dark:bg-gray-800 hover:shadow-lg transition overflow-hidden flex flex-col"
             >
               {/* Gig Image */}
               <img
-                src={g.img}
+                src={g.images[0]}
                 alt={g.title}
                 className="w-full h-48 object-cover"
               />
@@ -111,18 +90,20 @@ export default function SearchResultPage() {
                 <div className="flex items-center gap-3 mb-3">
                   <img
                     src={g.freelancer.avatar}
-                    alt={g.freelancer.name}
+                    alt={g.freelancer.displayName}
                     className="w-12 h-12 rounded-full border border-gray-200 dark:border-gray-700"
                   />
                   <div>
-                    <p className="font-semibold">{g.freelancer.name}</p>
+                    <p className="font-semibold">{g.freelancer.displayName}</p>
                     <p className="text-gray-500 dark:text-gray-400 text-sm">
                       {g.freelancer.location}
                     </p>
                   </div>
                 </div>
 
-                <h3 className="font-bold text-lg line-clamp-2 mb-2">{g.title}</h3>
+                <h3 className="font-bold text-lg line-clamp-2 mb-2">
+                  {g.title}
+                </h3>
 
                 <div className="flex items-center gap-1 mt-1 text-yellow-500">
                   {Array.from({ length: Math.round(g.freelancer.rating) }).map(
@@ -131,7 +112,7 @@ export default function SearchResultPage() {
                     )
                   )}
                   <span className="ml-1 text-gray-600 dark:text-gray-400 text-sm">
-                    {g.freelancer.rating} ({g.freelancer.reviews})
+                    {g.freelancer.rating} ({g.freelancer.reviewsCount || 0})
                   </span>
                 </div>
 
@@ -139,7 +120,17 @@ export default function SearchResultPage() {
                   <span className="text-green-600 font-semibold text-lg">
                     Starting at {formatBDT(g.price)}
                   </span>
-                  <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await axios.get(`/api/gig-click?id=${g._id}`);
+                        router.push(`/gig/${g._id}`);
+                      } catch (err) {
+                        console.error(err);
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                  >
                     View Gig
                   </button>
                 </div>

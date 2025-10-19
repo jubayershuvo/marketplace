@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User"; // already typed with IUser
 import { generateTokens } from "../login/route";
-import { generateOtp } from "@/lib/otp";
+import sendOTPEmail from "@/lib/emailOtp";
 
 // Email regex validator
 const validateEmail = (email: string): boolean =>
@@ -33,10 +33,16 @@ interface ILocation {
 
 export async function POST(req: NextRequest) {
   try {
-  
-
     const body = (await req.json()) as RegisterRequestBody;
-    const { firstName, lastName, email, password, userType, username, location } = body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      userType,
+      username,
+      location,
+    } = body;
 
     // ✅ Input validation
     if (
@@ -119,18 +125,40 @@ export async function POST(req: NextRequest) {
       newUser.email
     );
     const user = await User.findById(newUser._id).select("-password");
-    const otp = generateOtp(emailLower);
-    console.log("OTP:", otp);
-    // ✅ Return safe user (exclude password)
-    return NextResponse.json(
-      {
-        message: "Registration successful. Please verify your email.",
-        token: accessToken,
-        refreshToken,
-        user,
-      },
-      { status: 201 }
-    );
+   
+    await sendOTPEmail({
+      to: emailLower,
+      userName: user?.username,
+      expiryMinutes: 10,
+    });
+    const responseBody = {
+      message: "Login successful",
+      token: accessToken,
+      refreshToken,
+      user,
+    };
+
+    const res = NextResponse.json(responseBody, { status: 200 });
+    res.cookies.set({
+      name: "refreshToken",
+      value: refreshToken,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+    });
+    res.cookies.set({
+      name: "token",
+      value: accessToken,
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60,
+      sameSite: "lax",
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return res;
   } catch (error) {
     console.error("Register error:", error);
     return NextResponse.json(
