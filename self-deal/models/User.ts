@@ -29,7 +29,7 @@ export interface IUser extends Document {
 
   // Freelancer fields
   withdrawableBalance?: number;
-  balance?: number;
+  balance: number;
   pendingBalance?: number;
 
   pendingOrders?: number;

@@ -1,6 +1,7 @@
 import { getUser } from "@/lib/getUser";
 import { connectDB } from "@/lib/mongodb";
 import Gig from "@/models/Gig";
+import { NotificationModel } from "@/models/Notification";
 import OrderModel from "@/models/Order";
 import PaymentModel from "@/models/Payment";
 import TransactionModel from "@/models/Transaction";
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     if (user.userType !== "client") {
       return NextResponse.json(
         { error: "You are not a client" },
-        { status: 400 }
+        { status: 403 }
       );
     }
 
@@ -81,12 +82,21 @@ export async function POST(req: NextRequest) {
       amount,
       type: "credit",
       method: "order_payment",
-      status: "pending",
       order: order._id,
       client: user._id,
       payment: payment._id,
+      description: `Order payment for "${gig.title}"`,
     });
-
+    await NotificationModel.create({
+      user: gig.freelancer,
+      message: `You have a new order for your gig "${gig.title}".`,
+      href: `/orders`,
+    });
+    await NotificationModel.create({
+      user: order.client,
+      message: `Order confirmed for "${gig.title}".`,
+      href: `/orders`,
+    });
     return NextResponse.json({ order, payment, transaction });
   } catch (error) {
     console.log(error);

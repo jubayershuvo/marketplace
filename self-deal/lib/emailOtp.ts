@@ -213,7 +213,7 @@ export const sendOTPEmail = async (options: EmailOptions): Promise<boolean> => {
   try {
     const { to, userName = "User", expiryMinutes = 10 } = options;
     const otp = generateOtp(to);
-
+console.log(otp)
     // const transporter = createTransporter();
 
     // const mailOptions = {

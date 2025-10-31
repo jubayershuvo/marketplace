@@ -25,6 +25,21 @@ import { useAppSelector } from "@/lib/hooks";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
+interface Subcategory {
+  value: string;
+  label: string;
+}
+
+interface Category {
+  _id: string;
+  value: string;
+  label: string;
+  subcategories: Subcategory[];
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
 interface GigFormData {
   title: string;
   price: string;
@@ -55,6 +70,8 @@ const CreateGigPage = () => {
   const { isLoggedIn, user } = useAppSelector((state) => state.userAuth);
   const router = useRouter();
 
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const [gigFormData, setGigFormData] = useState<GigFormData>({
     title: "",
     images: [],
@@ -70,64 +87,6 @@ const CreateGigPage = () => {
     tags: [],
     faq: [{ question: "", answer: "" }],
   });
-
-  const categories = [
-    {
-      value: "programming-tech",
-      label: "Programming & Tech",
-      subcategories: [
-        "Web Development",
-        "Mobile Apps",
-        "Desktop Applications",
-        "Chatbots",
-      ],
-    },
-    {
-      value: "NID",
-      label: "NID",
-      subcategories: ["Make NID", "ReIssue NID", "Update NID", "Fix NID"],
-    },
-    {
-      value: "graphics-design",
-      label: "Graphics & Design",
-      subcategories: [
-        "Logo Design",
-        "Web Design",
-        "Print Design",
-        "Illustration",
-      ],
-    },
-    {
-      value: "digital-marketing",
-      label: "Digital Marketing",
-      subcategories: [
-        "SEO",
-        "Social Media",
-        "Content Marketing",
-        "Email Marketing",
-      ],
-    },
-    {
-      value: "writing-translation",
-      label: "Writing & Translation",
-      subcategories: [
-        "Content Writing",
-        "Copywriting",
-        "Translation",
-        "Proofreading",
-      ],
-    },
-    {
-      value: "video-animation",
-      label: "Video & Animation",
-      subcategories: [
-        "Video Editing",
-        "Animation",
-        "3D Modeling",
-        "Motion Graphics",
-      ],
-    },
-  ];
 
   const deliveryOptions = [
     "1 day",
@@ -155,6 +114,19 @@ const CreateGigPage = () => {
     setSubmitStatus("idle");
     setErrorMessage("");
   };
+
+  const getCategories = async () => {
+    try {
+      const response = await axios.get("/api/categories");
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  useEffect(() => {
+    getCategories();
+  }, []);
 
   const handleFeatureChange = (index: number, value: string) => {
     const newFeatures = [...gigFormData.features];
@@ -362,7 +334,7 @@ const CreateGigPage = () => {
             >
               <option value="">Select a category</option>
               {categories.map((cat) => (
-                <option key={cat.value} value={cat.value}>
+                <option key={cat._id} value={cat.value}>
                   {cat.label}
                 </option>
               ))}
@@ -394,8 +366,8 @@ const CreateGigPage = () => {
                 categories
                   .find((cat) => cat.value === gigFormData.category)
                   ?.subcategories.map((subcat) => (
-                    <option key={subcat} value={subcat}>
-                      {subcat}
+                    <option key={subcat.value} value={subcat.value}>
+                      {subcat.label}
                     </option>
                   ))}
             </select>
@@ -799,37 +771,45 @@ const CreateGigPage = () => {
 
       // Create FormData for the entire gig creation
       const formData = new FormData();
-      
+
       // Add text fields
-      formData.append('title', gigFormData.title);
-      formData.append('price', gigFormData.price);
+      formData.append("title", gigFormData.title);
+      formData.append("price", gigFormData.price);
       if (gigFormData.originalPrice) {
-        formData.append('originalPrice', gigFormData.originalPrice);
+        formData.append("originalPrice", gigFormData.originalPrice);
       }
-      formData.append('description', gigFormData.description);
-      formData.append('deliveryTime', gigFormData.deliveryTime);
-      formData.append('revisions', gigFormData.revisions);
-      formData.append('category', gigFormData.category);
-      formData.append('subcategory', gigFormData.subcategory);
+      formData.append("description", gigFormData.description);
+      formData.append("deliveryTime", gigFormData.deliveryTime);
+      formData.append("revisions", gigFormData.revisions);
+      formData.append("category", gigFormData.category);
+      formData.append("subcategory", gigFormData.subcategory);
       if (gigFormData.video) {
-        formData.append('video', gigFormData.video);
+        formData.append("video", gigFormData.video);
       }
 
       // Add arrays as JSON strings
-      formData.append('features', JSON.stringify(gigFormData.features.filter(f => f.trim().length > 0)));
-      formData.append('tags', JSON.stringify(gigFormData.tags));
-      formData.append('faq', JSON.stringify(gigFormData.faq.filter(f => f.question.trim() && f.answer.trim())));
+      formData.append(
+        "features",
+        JSON.stringify(gigFormData.features.filter((f) => f.trim().length > 0))
+      );
+      formData.append("tags", JSON.stringify(gigFormData.tags));
+      formData.append(
+        "faq",
+        JSON.stringify(
+          gigFormData.faq.filter((f) => f.question.trim() && f.answer.trim())
+        )
+      );
 
       // Add image files
       selectedFiles.forEach((file) => {
-        formData.append('images', file);
+        formData.append("images", file);
       });
 
       // Submit to API
       const response = await axios.post("/api/create-new-gig", formData, {
         withCredentials: true,
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
       });
 
@@ -845,12 +825,12 @@ const CreateGigPage = () => {
       }, 1000);
     } catch (error) {
       console.error("Error creating gig:", error);
-      
+
       let errorMsg = "Failed to create gig. Please try again.";
       if (axios.isAxiosError(error)) {
         errorMsg = error.response?.data?.message || error.message;
       }
-      
+
       setErrorMessage(errorMsg);
       setSubmitStatus("error");
     } finally {
@@ -899,7 +879,9 @@ const CreateGigPage = () => {
   const canGoNext = () => {
     switch (currentStep) {
       case 1:
-        return gigFormData.title && gigFormData.category && gigFormData.subcategory;
+        return (
+          gigFormData.title && gigFormData.category && gigFormData.subcategory
+        );
       case 2:
         return (
           gigFormData.price &&

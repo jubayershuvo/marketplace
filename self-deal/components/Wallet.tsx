@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Wallet,
   DollarSign,
@@ -9,7 +9,6 @@ import {
   EyeOff,
   CreditCard,
   Smartphone,
-  Building2,
   TrendingUp,
   TrendingDown,
   Calendar,
@@ -23,18 +22,23 @@ import {
 } from "lucide-react";
 import { useAppSelector } from "@/lib/hooks";
 import { useRouter } from "next/navigation";
+import { User } from "@/types/Profile";
+import axios from "axios";
 
 // Types
 interface Transaction {
-  id: string;
+  _id: string;
+  user: User;
   type: "credit" | "debit";
   amount: number;
   description: string;
   status: "completed" | "pending" | "failed";
-  date: string;
-  orderId?: string;
-  clientName?: string;
+  date: Date;
+  order?: string;
+  payment?: string;
+  client?: string;
   method: "order_payment" | "withdrawal" | "refund" | "bonus" | "fee";
+  createdAt: string;
 }
 
 interface WalletData {
@@ -43,92 +47,86 @@ interface WalletData {
   totalEarned: number;
   totalWithdrawn: number;
   availableForWithdrawal: number;
+  pendingWithdrawals: number;
 }
 
 interface WithdrawalRequest {
   amount: number;
   method: "bank" | "bkash" | "nagad";
-  accountDetails?: string;
+  number: string;
 }
+
+// Constants
+const WITHDRAWAL_CONSTANTS = {
+  MIN_WITHDRAWAL_AMOUNT: 500,
+  WITHDRAWAL_FEE_PERCENTAGE: 5, // 5% fee
+  MIN_WITHDRAWAL_FEE: 10, // Minimum fee amount
+};
 
 // API Service Functions
 const walletAPI = {
   // Get wallet data
   async getWalletData(): Promise<WalletData> {
-    const response = await fetch('/api/freelancer/wallet', {
-      method: 'GET',
+    const response = await fetch("/api/freelancer/wallet", {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch wallet data');
+      throw new Error("Failed to fetch wallet data");
     }
 
     return response.json();
   },
 
-  // Get transactions
-  async getTransactions(params?: {
-    type?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<Transaction[]> {
-    const queryParams = new URLSearchParams();
-    if (params?.type && params.type !== 'all') queryParams.append('type', params.type);
-    if (params?.search) queryParams.append('search', params.search);
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-    const url = `/api/freelancer/transactions?${queryParams.toString()}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
+  // Get all transactions (without filters)
+  async getAllTransactions(): Promise<Transaction[]> {
+    const response = await fetch("/api/freelancer/transactions", {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch transactions');
+      throw new Error("Failed to fetch transactions");
     }
     const data = await response.json();
     return data.transactions;
   },
 
-  
-
   // Create withdrawal request
-  async createWithdrawal(request: WithdrawalRequest): Promise<{ success: boolean; transaction: Transaction }> {
-    const response = await fetch('/api/freelancer/withdraw', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Withdrawal failed');
+  async createWithdrawal(
+    request: WithdrawalRequest
+  ): Promise<{ success: boolean; transaction: Transaction }> {
+    try {
+      const response = await axios.post("/api/freelancer/withdraw", request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message || "Withdrawal failed";
+        throw new Error(errorMessage);
+      }
+      throw new Error("Withdrawal failed");
     }
-
-    return response.json();
   },
 
   // Export transactions
-  async exportTransactions(format: 'csv' | 'pdf' = 'csv'): Promise<Blob> {
-    const response = await fetch(`/api/freelancer/transactions/export?format=${format}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+  async exportTransactions(format: "csv" | "pdf" = "csv"): Promise<Blob> {
+    const response = await fetch(
+      `/api/freelancer/transactions/export?format=${format}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     if (!response.ok) {
-      throw new Error('Export failed');
+      throw new Error("Export failed");
     }
 
     return response.blob();
@@ -136,39 +134,94 @@ const walletAPI = {
 };
 
 const FreelancerWallet = () => {
+  const router = useRouter();
+  const { user } = useAppSelector((state) => state.userAuth);
+
+  // State management
   const [walletData, setWalletData] = useState<WalletData>({
     balance: 0,
     pendingBalance: 0,
     totalEarned: 0,
     totalWithdrawn: 0,
     availableForWithdrawal: 0,
+    pendingWithdrawals: 0,
   });
-  
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  console.log("Transactions:", transactions);
-  const router = useRouter();
 
-  const { user } = useAppSelector((state) => state.userAuth);
-
-  useEffect(() => {
-    if (!user.userType || user.userType !== "freelancer") {
-      router.push("/");
-      return;
-    }
-    // Load initial data
-    loadWalletData();
-    loadTransactions();
-  }, [user, router]);
-
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [showBalance, setShowBalance] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [filterType, setFilterType] = useState("all");
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [selectedMethod, setSelectedMethod] = useState("bank");
+  const [selectedMethod, setSelectedMethod] = useState("bkash");
+  const [accountDetails, setAccountDetails] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+
+  // Client-side filtering using useMemo for performance
+  const filteredTransactions = useMemo(() => {
+    let filtered = allTransactions;
+
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter(transaction => transaction.type === filterType);
+    }
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(transaction =>
+        transaction.description.toLowerCase().includes(searchLower) ||
+        transaction.amount.toString().includes(searchTerm) ||
+        transaction.status.toLowerCase().includes(searchLower) ||
+        transaction.method.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [allTransactions, filterType, searchTerm]);
+
+  // Calculate withdrawal fee
+  const calculateWithdrawalFee = (amount: number): number => {
+    const fee = Math.ceil(
+      amount / WITHDRAWAL_CONSTANTS.WITHDRAWAL_FEE_PERCENTAGE
+    );
+    return fee
+  };
+
+  // Calculate total withdrawal amount (requested amount + fee)
+  const calculateTotalWithdrawalAmount = (amount: number): number => {
+    return amount + calculateWithdrawalFee(amount);
+  };
+
+  // Check if balance is sufficient including fees
+  const isBalanceSufficient = (amount: number): boolean => {
+    const totalAmount = calculateTotalWithdrawalAmount(amount);
+    return totalAmount <= walletData.balance;
+  };
+
+  // Get current withdrawal fee for display
+  const currentWithdrawalFee = withdrawAmount
+    ? calculateWithdrawalFee(parseFloat(withdrawAmount) || 0)
+    : 0;
+
+  // Get total withdrawal amount for display
+  const totalWithdrawalAmount = withdrawAmount
+    ? calculateTotalWithdrawalAmount(parseFloat(withdrawAmount) || 0)
+    : 0;
+
+  // Initial data load - only once on mount
+  useEffect(() => {
+    if (!user.userType || user.userType !== "freelancer") {
+      router.push("/");
+      return;
+    }
+    loadWalletData();
+    loadAllTransactions();
+  }, []);
 
   // Load wallet data
   const loadWalletData = async () => {
@@ -178,46 +231,39 @@ const FreelancerWallet = () => {
       const data = await walletAPI.getWalletData();
       setWalletData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load wallet data');
-      console.error('Error loading wallet data:', err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load wallet data"
+      );
+      console.error("Error loading wallet data:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load transactions
-  const loadTransactions = async () => {
+  // Load all transactions (without filters)
+  const loadAllTransactions = async () => {
     try {
-      setLoading(true);
       setError(null);
-      const data = await walletAPI.getTransactions({
-        type: filterType !== 'all' ? filterType : undefined,
-        search: searchTerm || undefined,
-      });
-      setTransactions(data);
+      const data = await walletAPI.getAllTransactions();
+      setAllTransactions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load transactions');
-      console.error('Error loading transactions:', err);
-    } finally {
-      setLoading(false);
+      setError(
+        err instanceof Error ? err.message : "Failed to load transactions"
+      );
+      console.error("Error loading transactions:", err);
     }
   };
 
   // Refresh all data
   const refreshData = async () => {
-    await Promise.all([loadWalletData(), loadTransactions()]);
+    await Promise.all([loadWalletData(), loadAllTransactions()]);
   };
 
-  // Handle filter changes
-  useEffect(() => {
-    if (user.userType === "freelancer") {
-      loadTransactions();
-    }
-  }, [filterType, searchTerm]);
-
+  // Format currency
   const formatBDT = (amount: number) =>
-    `৳${amount.toLocaleString("en-BD", { minimumFractionDigits: 2 })}`;
+    `৳${amount?.toLocaleString("en-BD")}`;
 
+  // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -228,6 +274,7 @@ const FreelancerWallet = () => {
     });
   };
 
+  // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed":
@@ -241,6 +288,7 @@ const FreelancerWallet = () => {
     }
   };
 
+  // Get method icon
   const getMethodIcon = (method: string) => {
     switch (method) {
       case "order_payment":
@@ -258,64 +306,103 @@ const FreelancerWallet = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesFilter =
-      filterType === "all" || transaction.type === filterType;
-    const matchesSearch =
-      transaction.description
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      transaction.clientName
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      transaction.orderId?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
-
+  // Handle withdrawal
   const handleWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) return;
 
+    const amount = parseFloat(withdrawAmount);
+    const fee = calculateWithdrawalFee(amount);
+    const totalAmount = amount + fee;
+
+    // Validate minimum amount
+    if (amount < WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT) {
+      setWithdrawError(
+        `Minimum withdrawal amount is ${formatBDT(
+          WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT
+        )}`
+      );
+      return;
+    }
+
+    // Validate balance including fees
+    if (!isBalanceSufficient(amount)) {
+      setWithdrawError(
+        `Insufficient balance. You need ${formatBDT(
+          totalAmount
+        )} including fees.`
+      );
+      return;
+    }
+
+    // Validate account details for mobile methods
+    if (
+      (selectedMethod === "bkash" || selectedMethod === "nagad") &&
+      !accountDetails
+    ) {
+      setWithdrawError("Please enter your phone number");
+      return;
+    }
+
+    // Validate phone number format for Bangladesh
+    if (
+      (selectedMethod === "bkash" || selectedMethod === "nagad") &&
+      accountDetails
+    ) {
+      const phoneRegex = /^(?:\+?88)?01[3-9]\d{8}$/;
+      if (!phoneRegex.test(accountDetails.replace(/\s/g, ""))) {
+        setWithdrawError("Please enter a valid Bangladesh phone number (01XXXXXXXXX)");
+        return;
+      }
+    }
+
     try {
-      setLoading(true);
-      setError(null);
+      setWithdrawLoading(true);
+      setWithdrawError(null);
 
       const withdrawalRequest: WithdrawalRequest = {
-        amount: parseFloat(withdrawAmount),
+        amount: amount,
         method: selectedMethod as "bank" | "bkash" | "nagad",
+        number: accountDetails,
       };
 
-      const result = await walletAPI.createWithdrawal(withdrawalRequest);
-      
-      // Update transactions list
-      setTransactions((prev) => [result.transaction, ...prev]);
-      
-      // Update wallet data
-      setWalletData((prev) => ({
-        ...prev,
-        balance: prev.balance - parseFloat(withdrawAmount),
-        availableForWithdrawal: prev.availableForWithdrawal - parseFloat(withdrawAmount),
-        totalWithdrawn: prev.totalWithdrawn + parseFloat(withdrawAmount),
-      }));
+       await walletAPI.createWithdrawal(withdrawalRequest);
 
+      // Refresh all data to get the latest from server
+      await refreshData();
+
+      // Close modal and reset form
       setShowWithdrawModal(false);
       setWithdrawAmount("");
+      setAccountDetails("");
+      setWithdrawError(null);
+      
+      // Show success message
+      setError("Withdrawal request submitted successfully!");
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setError(null);
+      }, 3000);
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Withdrawal failed');
-      console.error('Error processing withdrawal:', err);
+      const errorMessage = err instanceof Error ? err.message : "Withdrawal failed";
+      setWithdrawError(errorMessage);
+      console.error("Error processing withdrawal:", err);
     } finally {
-      setLoading(false);
+      setWithdrawLoading(false);
     }
   };
 
-  const handleExport = async (format: 'csv' | 'pdf' = 'csv') => {
+  // Handle export - export all transactions, not filtered ones
+  const handleExport = async (format: "csv" | "pdf" = "csv") => {
     try {
       setLoading(true);
       const blob = await walletAPI.exportTransactions(format);
-      
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
+      const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
       a.download = `transactions.${format}`;
       document.body.appendChild(a);
@@ -323,10 +410,32 @@ const FreelancerWallet = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
-      console.error('Error exporting transactions:', err);
+      setError(err instanceof Error ? err.message : "Export failed");
+      console.error("Error exporting transactions:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle filter changes - no API calls, just state updates
+  const handleFilterChange = (newFilterType: string) => {
+    setFilterType(newFilterType);
+  };
+
+  // Handle search - no API calls, just state updates
+  const handleSearchChange = (newSearchTerm: string) => {
+    setSearchTerm(newSearchTerm);
+  };
+
+  // Reset withdrawal modal when opened/closed
+  const handleWithdrawModalToggle = (show: boolean) => {
+    setShowWithdrawModal(show);
+    if (!show) {
+      // Reset form when closing modal
+      setWithdrawAmount("");
+      setAccountDetails("");
+      setWithdrawError(null);
+      setSelectedMethod("bkash");
     }
   };
 
@@ -335,13 +444,29 @@ const FreelancerWallet = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-              <AlertCircle className="w-4 h-4" />
+          <div className={`p-4 rounded-lg ${
+            error.includes("success") 
+              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" 
+              : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+          }`}>
+            <div className={`flex items-center gap-2 ${
+              error.includes("success") 
+                ? "text-green-700 dark:text-green-400" 
+                : "text-red-700 dark:text-red-400"
+            }`}>
+              {error.includes("success") ? (
+                <CheckCircle className="w-4 h-4" />
+              ) : (
+                <AlertCircle className="w-4 h-4" />
+              )}
               <span className="text-sm font-medium">{error}</span>
               <button
                 onClick={() => setError(null)}
-                className="ml-auto text-red-500 hover:text-red-700"
+                className={`ml-auto ${
+                  error.includes("success") 
+                    ? "text-green-500 hover:text-green-700" 
+                    : "text-red-500 hover:text-red-700"
+                }`}
               >
                 <XCircle className="w-4 h-4" />
               </button>
@@ -372,8 +497,10 @@ const FreelancerWallet = () => {
               Refresh
             </button>
             <button
-              onClick={() => setShowWithdrawModal(true)}
-              disabled={walletData.availableForWithdrawal < 500}
+              onClick={() => handleWithdrawModalToggle(true)}
+              disabled={
+                !isBalanceSufficient(WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT)
+              }
               className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ArrowUpRight className="w-4 h-4" />
@@ -387,7 +514,10 @@ const FreelancerWallet = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
+                <div
+                  key={i}
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse"
+                >
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
                   </div>
@@ -444,7 +574,9 @@ const FreelancerWallet = () => {
                     Pending Balance
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {showBalance ? formatBDT(walletData.pendingBalance) : "৳*****"}
+                    {showBalance
+                      ? formatBDT(walletData.pendingBalance)
+                      : "৳*****"}
                   </p>
                 </div>
               </div>
@@ -466,7 +598,25 @@ const FreelancerWallet = () => {
                 </div>
               </div>
 
-              {/* Available for Withdrawal */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                    <Clock className="w-6 h-6 text-yellow-600" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Pending Withdrawals
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {showBalance
+                      ? formatBDT(walletData.pendingWithdrawals)
+                      : "৳*****"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Total Withdrawn */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
                   <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -526,7 +676,7 @@ const FreelancerWallet = () => {
                             type="text"
                             placeholder="Search transactions..."
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           />
                         </div>
@@ -534,15 +684,15 @@ const FreelancerWallet = () => {
                       <div className="flex gap-3">
                         <select
                           value={filterType}
-                          onChange={(e) => setFilterType(e.target.value)}
+                          onChange={(e) => handleFilterChange(e.target.value)}
                           className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         >
                           <option value="all">All Transactions</option>
                           <option value="credit">Credits Only</option>
                           <option value="debit">Debits Only</option>
                         </select>
-                        <button 
-                          onClick={() => handleExport('csv')}
+                        <button
+                          onClick={() => handleExport("csv")}
                           disabled={loading}
                           className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                         >
@@ -556,7 +706,7 @@ const FreelancerWallet = () => {
                     <div className="space-y-3">
                       {filteredTransactions.map((transaction) => (
                         <div
-                          key={transaction.id}
+                          key={transaction._id}
                           className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >
                           <div className="flex items-center space-x-4">
@@ -571,19 +721,7 @@ const FreelancerWallet = () => {
                                 {getStatusIcon(transaction.status)}
                               </div>
                               <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                <span>{formatDate(transaction.date)}</span>
-                                {transaction.orderId && (
-                                  <>
-                                    <span>•</span>
-                                    <span>Order: {transaction.orderId}</span>
-                                  </>
-                                )}
-                                {transaction.clientName && (
-                                  <>
-                                    <span>•</span>
-                                    <span>Client: {transaction.clientName}</span>
-                                  </>
-                                )}
+                                <span>{formatDate(transaction.createdAt)}</span>
                               </div>
                             </div>
                           </div>
@@ -613,7 +751,10 @@ const FreelancerWallet = () => {
                           No transactions found
                         </p>
                         <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                          Try adjusting your search or filter criteria
+                          {allTransactions.length === 0 
+                            ? "You don't have any transactions yet"
+                            : "Try adjusting your search or filter criteria"
+                          }
                         </p>
                       </div>
                     )}
@@ -660,13 +801,13 @@ const FreelancerWallet = () => {
       {/* Withdrawal Modal */}
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                 Withdraw Funds
               </h3>
               <button
-                onClick={() => setShowWithdrawModal(false)}
+                onClick={() => handleWithdrawModalToggle(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <XCircle className="w-6 h-6" />
@@ -674,13 +815,23 @@ const FreelancerWallet = () => {
             </div>
 
             <div className="space-y-4">
+              {/* Withdrawal Error Message */}
+              {withdrawError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">{withdrawError}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Available Balance */}
               <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                 <p className="text-sm text-green-600 dark:text-green-400">
                   Available for withdrawal
                 </p>
                 <p className="text-xl font-bold text-green-700 dark:text-green-300">
-                  {formatBDT(walletData.availableForWithdrawal)}
+                  {formatBDT(walletData.balance)}
                 </p>
               </div>
 
@@ -696,16 +847,59 @@ const FreelancerWallet = () => {
                   <input
                     type="number"
                     value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    onChange={(e) => {
+                      setWithdrawAmount(e.target.value);
+                      setWithdrawError(null); // Clear error when user types
+                    }}
                     placeholder="0.00"
-                    min="500"
-                    max={walletData.availableForWithdrawal}
+                    min={WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT}
+                    max={walletData.balance}
                     className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Minimum withdrawal amount: ৳500
+                  Minimum withdrawal amount:{" "}
+                  {formatBDT(WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT)}
                 </p>
+
+                {/* Fee and Total Calculation */}
+                {withdrawAmount &&
+                  parseFloat(withdrawAmount) >=
+                    WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT && (
+                    <div className="mt-3 space-y-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Withdrawal Amount:
+                        </span>
+                        <span className="font-medium">
+                          {formatBDT(parseFloat(withdrawAmount))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Fee ({WITHDRAWAL_CONSTANTS.WITHDRAWAL_FEE_PERCENTAGE}
+                          %):
+                        </span>
+                        <span className="text-red-600 dark:text-red-400">
+                          -{formatBDT(currentWithdrawalFee)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm font-semibold border-t border-gray-200 dark:border-gray-600 pt-2">
+                        <span className="text-gray-700 dark:text-gray-300">
+                          Total Deducted:
+                        </span>
+                        <span className="text-green-600 dark:text-green-400">
+                          {formatBDT(totalWithdrawalAmount)}
+                        </span>
+                      </div>
+                      {!isBalanceSufficient(parseFloat(withdrawAmount)) && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                          Insufficient balance for this withdrawal including
+                          fees
+                        </p>
+                      )}
+                    </div>
+                  )}
               </div>
 
               {/* Withdrawal Method */}
@@ -718,23 +912,13 @@ const FreelancerWallet = () => {
                     <input
                       type="radio"
                       name="method"
-                      value="bank"
-                      checked={selectedMethod === "bank"}
-                      onChange={(e) => setSelectedMethod(e.target.value)}
-                      className="text-green-600 focus:ring-green-500"
-                    />
-                    <Building2 className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-700 dark:text-gray-300">
-                      Bank Transfer
-                    </span>
-                  </label>
-                  <label className="flex items-center space-x-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="method"
                       value="bkash"
                       checked={selectedMethod === "bkash"}
-                      onChange={(e) => setSelectedMethod(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedMethod(e.target.value);
+                        setAccountDetails("");
+                        setWithdrawError(null);
+                      }}
                       className="text-green-600 focus:ring-green-500"
                     />
                     <Smartphone className="w-5 h-5 text-gray-400" />
@@ -748,7 +932,11 @@ const FreelancerWallet = () => {
                       name="method"
                       value="nagad"
                       checked={selectedMethod === "nagad"}
-                      onChange={(e) => setSelectedMethod(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedMethod(e.target.value);
+                        setAccountDetails("");
+                        setWithdrawError(null);
+                      }}
                       className="text-green-600 focus:ring-green-500"
                     />
                     <CreditCard className="w-5 h-5 text-gray-400" />
@@ -759,18 +947,76 @@ const FreelancerWallet = () => {
                 </div>
               </div>
 
+              {/* Account Details Input */}
+              {(selectedMethod === "bkash" || selectedMethod === "nagad") && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {selectedMethod === "bkash" ? "bKash" : "Nagad"} Phone
+                    Number
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      +88
+                    </span>
+                    <input
+                      type="tel"
+                      value={accountDetails}
+                      onChange={(e) => {
+                        // Only allow numbers
+                        const value = e.target.value.replace(/\D/g, "");
+                        setAccountDetails(value);
+                        setWithdrawError(null);
+                      }}
+                      placeholder="01XXXXXXXXX"
+                      maxLength={11}
+                      className="w-full pl-14 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter your 11-digit phone number (01XXXXXXXXX)
+                  </p>
+                </div>
+              )}
+
+              {selectedMethod === "bank" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Bank Account Details (Optional)
+                  </label>
+                  <textarea
+                    value={accountDetails}
+                    onChange={(e) => {
+                      setAccountDetails(e.target.value);
+                      setWithdrawError(null);
+                    }}
+                    placeholder="Bank name, account number, branch..."
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Provide your bank details or use saved account
+                  </p>
+                </div>
+              )}
+
               {/* Processing Info */}
               <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                  • Bank transfers take 1-3 business days • Mobile payments are
-                  processed within 24 hours • Minimum withdrawal amount is ৳500
+                  • Bank transfers take 1-3 business days
+                  <br />
+                  • Mobile payments are processed within 24 hours
+                  <br />• Minimum withdrawal amount is{" "}
+                  {formatBDT(WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT)}
+                  <br />• Withdrawal fee:{" "}
+                  {WITHDRAWAL_CONSTANTS.WITHDRAWAL_FEE_PERCENTAGE}% (min{" "}
+                  {formatBDT(WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_FEE)})
                 </p>
               </div>
 
               {/* Action Buttons */}
               <div className="flex space-x-3 pt-4">
                 <button
-                  onClick={() => setShowWithdrawModal(false)}
+                  onClick={() => handleWithdrawModalToggle(false)}
                   className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
@@ -779,14 +1025,17 @@ const FreelancerWallet = () => {
                   onClick={handleWithdraw}
                   disabled={
                     !withdrawAmount ||
-                    parseFloat(withdrawAmount) < 500 ||
-                    parseFloat(withdrawAmount) >
-                      walletData.availableForWithdrawal ||
-                    loading
+                    parseFloat(withdrawAmount) <
+                      WITHDRAWAL_CONSTANTS.MIN_WITHDRAWAL_AMOUNT ||
+                    !isBalanceSufficient(parseFloat(withdrawAmount)) ||
+                    ((selectedMethod === "bkash" ||
+                      selectedMethod === "nagad") &&
+                      !accountDetails) ||
+                    withdrawLoading
                   }
                   className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {loading ? (
+                  {withdrawLoading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
                       Processing...

@@ -4,36 +4,77 @@ interface Transaction extends Document {
   user: ObjectId;
   type: "credit" | "debit";
   amount: number;
-  description?: string;
+  description: string;
   status: "completed" | "pending" | "failed";
   date: Date;
   order?: ObjectId;
-  payment?: ObjectId ;
+  payment?: ObjectId;
   client?: ObjectId;
   method: "order_payment" | "withdrawal" | "refund" | "bonus" | "fee";
 }
 
 const transactionSchema = new Schema<Transaction>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    type: { type: String, enum: ["credit", "debit"], required: true },
-    amount: { type: Number, required: true },
-    description: { type: String },
-    status: { type: String, enum: ["completed", "pending", "failed"], default: "pending" },
-    date: { type: Date, default: Date.now },
-    order: { type: Schema.Types.ObjectId, ref: "Order" },
-    client: { type: Schema.Types.ObjectId, ref: "User" },
-    payment: { type: Schema.Types.ObjectId, ref: "Payment" },
+    user: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User", 
+      required: true,
+      index: true 
+    },
+    type: { 
+      type: String, 
+      enum: ["credit", "debit"], 
+      required: true 
+    },
+    amount: { 
+      type: Number, 
+      required: true,
+      min: [0, "Amount cannot be negative"] 
+    },
+    description: { 
+      type: String, 
+      required: true,
+      trim: true 
+    },
+    status: { 
+      type: String, 
+      enum: ["completed", "pending", "failed"], 
+      default: "pending",
+      index: true 
+    },
+    date: { 
+      type: Date, 
+      default: Date.now,
+      index: true 
+    },
+    order: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Order" 
+    },
+    client: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User" 
+    },
+    payment: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Payment" 
+    },
     method: {
       type: String,
       enum: ["order_payment", "withdrawal", "refund", "bonus", "fee"],
       required: true,
+      index: true
     },
   },
   {
-    timestamps: true, // adds createdAt & updatedAt
+    timestamps: true,
   }
 );
+
+// Compound indexes for common queries
+transactionSchema.index({ user: 1, status: 1, date: -1 });
+transactionSchema.index({ user: 1, method: 1, date: -1 });
+
 
 const TransactionModel =
   mongoose.models.Transaction ||

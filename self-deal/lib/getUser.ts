@@ -9,46 +9,46 @@ interface TokenPayload extends JwtPayload {
 
 export async function getUser() {
   try {
-    const authHeader = (await headers()).get("authorization"); // ✅ no await
-    const cookieStore = cookies(); // ✅ no await
+    const headerList = headers();
+    const cookieStore = cookies();
 
+    // 1️⃣ Try from Bearer token (Authorization header)
+    const authHeader = (await headerList).get("authorization");
     let token: string | null = null;
 
-    // 1. From Bearer
     if (authHeader?.startsWith("Bearer ")) {
       token = authHeader.split(" ")[1];
     }
 
-    // 2. From Cookie
+    // 2️⃣ Fallback to cookie token
     if (!token) {
       token = (await cookieStore).get("token")?.value || null;
     }
 
-    if (!token) {
-      return null;
-    }
+    // 3️⃣ If no token found → unauthenticated
+    if (!token) return null;
 
-    // Verify token
+    // 4️⃣ Verify token
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET as string
     ) as TokenPayload;
 
-    if (!decoded.userId) {
-      return null;
-    }
+    if (!decoded?.userId) return null;
 
+    // 5️⃣ Fetch user
     const user = await User.findById(decoded.userId);
 
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
-    user.lastSeen = new Date();
-    await user.save();
+    // 6️⃣ Update lastSeen (non-blocking)
+    User.findByIdAndUpdate(decoded.userId, { lastSeen: new Date() }).catch(() =>
+      console.warn("⚠️ Failed to update user lastSeen")
+    );
+
     return user;
   } catch (err) {
-    console.error("❌ getUser error:");
+    console.error("❌ getUser error:", err);
     return null;
   }
 }
