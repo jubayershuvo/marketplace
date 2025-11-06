@@ -1,15 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
 import { Gig } from "@/types/Profile";
 import Loading from "./Loading";
 
-export default function SearchResultPage() {
-  const searchParams = useSearchParams();
-  const query = searchParams.get("q") || "";
+export default function SearchResultPage({ query }: { query: string }) {
+ 
   const [searchQuery, setSearchQuery] = useState<string>(query);
   const [filtered, setGigs] = useState<Gig[]>([]);
   const router = useRouter();
