@@ -1,4 +1,4 @@
-import { IGig } from "@/types/Profile";
+import { IGig } from "@/models/Gig";
 import { Star } from "lucide-react";
 import React from "react";
 import { FaHeart } from "react-icons/fa";
@@ -18,7 +18,7 @@ function GigCard({ gig }: { gig: IGig }) {
 
       {/* Thumbnail */}
       <img
-        src={gig.thumbnail}
+        src={gig.images[0]}
         alt={gig.title}
         className="w-full h-48 object-cover"
       />
@@ -35,15 +35,15 @@ function GigCard({ gig }: { gig: IGig }) {
               <Star
                 key={idx}
                 className={`${
-                  idx < Math.round(gig.rating)
+                  idx < Math.round(gig.avgRating)
                     ? "text-yellow-400"
                     : "text-gray-300 dark:text-gray-600"
                 }`}
               />
             ))}
           </div>
-          <span>{gig.rating.toFixed(1)}</span>
-          <span>({gig.reviews} reviews)</span>
+          <span>{gig.avgRating.toFixed(1)}</span>
+          <span>({gig.reviews.length} reviews)</span>
         </div>
 
         {/* Price */}
