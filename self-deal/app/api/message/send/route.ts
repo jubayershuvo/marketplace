@@ -1,4 +1,3 @@
-// app/api/message/send/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import MessageModel from "@/models/Message";
 import OrderModel from "@/models/Order";
@@ -7,6 +6,98 @@ import { getUser } from "@/lib/getUser";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
+import { Types } from "mongoose";
+
+// Configuration
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_TOTAL_SIZE = 50 * 1024 * 1024; // 50MB total for multiple files
+
+// Allowed file types
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg', 
+  'image/jpg', 
+  'image/png', 
+  'image/gif', 
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp'
+];
+
+const ALLOWED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/csv',
+  'application/rtf'
+];
+
+const ALLOWED_ARCHIVE_TYPES = [
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/x-rar-compressed',
+  'application/x-tar',
+  'application/gzip'
+];
+
+const ALLOWED_AUDIO_TYPES = [
+  'audio/mpeg',
+  'audio/wav',
+  'audio/ogg',
+  'audio/aac',
+  'audio/flac',
+  'audio/webm'
+];
+
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/mpeg',
+  'video/ogg',
+  'video/webm',
+  'video/quicktime',
+  'video/x-msvideo'
+];
+
+// Combine all allowed types
+const ALLOWED_FILE_TYPES = [
+  ...ALLOWED_IMAGE_TYPES,
+  ...ALLOWED_DOCUMENT_TYPES,
+  ...ALLOWED_ARCHIVE_TYPES,
+  ...ALLOWED_AUDIO_TYPES,
+  ...ALLOWED_VIDEO_TYPES
+];
+
+// Helper function to check if file type is allowed
+const isFileTypeAllowed = (mimeType: string, fileName: string): boolean => {
+  // Check against our allowed types
+  if (ALLOWED_FILE_TYPES.includes(mimeType)) {
+    return true;
+  }
+
+  // Additional safety check for common file extensions
+  const fileExtension = fileName.toLowerCase().split('.').pop();
+  const allowedExtensions = [
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp',
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'rtf',
+    'zip', 'rar', 'tar', 'gz',
+    'mp3', 'wav', 'ogg', 'aac', 'flac',
+    'mp4', 'mpeg', 'ogv', 'webm', 'mov', 'avi'
+  ];
+
+  return allowedExtensions.includes(fileExtension || '');
+};
+
+// Helper function to get file category
+const getFileCategory = (mimeType: string): string => {
+  if (mimeType.startsWith('image/')) return 'images';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  if (mimeType.startsWith('video/')) return 'videos';
+  return 'files';
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +114,7 @@ export async function POST(req: NextRequest) {
     const contentType = req.headers.get("content-type") || "";
     let conversation: string;
     let content: string = "";
-    let attachments: Array<{ url: string; type: string; name: string }> = [];
+    let attachments: Array<{ url: string; type: string; name: string; size?: number }> = [];
     let type: "text" | "image" | "file" = "text";
     let chatId: string;
 
@@ -33,54 +124,129 @@ export async function POST(req: NextRequest) {
       
       conversation = formData.get("conversation") as string;
       chatId = formData.get("chatId") as string;
-      type = (formData.get("type") as "text" | "image" | "file") || "file";
+      const messageType = formData.get("type") as string;
+      type = (messageType === "image" || messageType === "file") ? messageType as "image" | "file" : "file";
       
-      const file = formData.get("file") as File || formData.get("image") as File;
+      // Handle multiple files
+      const files = formData.getAll("files") as File[];
+      const images = formData.getAll("images") as File[];
       
-      if (!file) {
+      const allFiles = [...files, ...images];
+      
+      if (allFiles.length === 0) {
+        const singleFile = formData.get("file") as File || formData.get("image") as File;
+        if (singleFile) {
+          allFiles.push(singleFile);
+        }
+      }
+
+      if (allFiles.length === 0) {
         return NextResponse.json(
-          { error: "No file provided" },
+          { error: "No files provided" },
           { status: 400 }
         );
       }
 
-      // Validate file
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
+      // Validate total size
+      const totalSize = allFiles.reduce((acc, file) => acc + file.size, 0);
+      if (totalSize > MAX_TOTAL_SIZE) {
         return NextResponse.json(
-          { error: "File size exceeds 10MB limit" },
+          { error: `Total file size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit` },
           { status: 400 }
         );
       }
 
-      // Create uploads directory if it doesn't exist
-      const uploadDir = join(process.cwd(), "public", "uploads", type === "image" ? "images" : "files");
-      try {
-        await mkdir(uploadDir, { recursive: true });
-      } catch (error) {
-        console.error("Error creating upload directory:", error);
+      // Process each file
+      for (const file of allFiles) {
+        // Validate individual file size
+        if (file.size > MAX_FILE_SIZE) {
+          return NextResponse.json(
+            { error: `File "${file.name}" exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit` },
+            { status: 400 }
+          );
+        }
+
+        // Validate file type
+        if (!isFileTypeAllowed(file.type, file.name)) {
+          return NextResponse.json(
+            { error: `File type "${file.type}" for "${file.name}" is not supported. Please use common document, image, audio, or video formats.` },
+            { status: 400 }
+          );
+        }
+
+        // Determine file category for storage
+        const fileCategory = getFileCategory(file.type);
+        const isImage = fileCategory === 'images';
+
+        // Create uploads directory if it doesn't exist
+        const uploadDir = join(process.cwd(), "public", "uploads", fileCategory);
+        try {
+          await mkdir(uploadDir, { recursive: true });
+        } catch (error) {
+          console.error("Error creating upload directory:", error);
+          return NextResponse.json(
+            { error: "Server error: Could not create upload directory" },
+            { status: 500 }
+          );
+        }
+
+        // Generate unique filename
+        const fileExtension = file.name.split('.').pop() || 'file';
+        const uniqueFilename = `${uuidv4()}.${fileExtension}`;
+        const filePath = join(uploadDir, uniqueFilename);
+
+        try {
+          // Save file
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          await writeFile(filePath, buffer);
+        } catch (error) {
+          console.error("Error saving file:", error);
+          return NextResponse.json(
+            { error: "Server error: Could not save file" },
+            { status: 500 }
+          );
+        }
+
+        // Create file URL
+        const fileUrl = `/uploads/${fileCategory}/${uniqueFilename}`;
+
+        attachments.push({
+          url: fileUrl,
+          type: file.type,
+          name: file.name,
+          size: file.size,
+        });
       }
 
-      // Generate unique filename
-      const fileExtension = file.name.split(".").pop();
-      const uniqueFilename = `${uuidv4()}.${fileExtension}`;
-      const filePath = join(uploadDir, uniqueFilename);
+      // Set content and type based on attachments
+      if (attachments.length > 0) {
+        const hasImages = attachments.some(att => att.type.startsWith('image/'));
+        const hasVideos = attachments.some(att => att.type.startsWith('video/'));
+        const hasAudio = attachments.some(att => att.type.startsWith('audio/'));
 
-      // Save file
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
-
-      // Create file URL
-      const fileUrl = `/uploads/${type === "image" ? "images" : "files"}/${uniqueFilename}`;
-
-      attachments = [{
-        url: fileUrl,
-        type: file.type,
-        name: file.name,
-      }];
-
-      content = file.name;
+        if (attachments.length === 1) {
+          content = attachments[0].name;
+          if (hasImages) type = 'image';
+          else if (hasVideos) type = 'file'; // You might want to add 'video' type
+          else if (hasAudio) type = 'file'; // You might want to add 'audio' type
+          else type = 'file';
+        } else {
+          const imageCount = attachments.filter(att => att.type.startsWith('image/')).length;
+          const fileCount = attachments.length - imageCount;
+          
+          if (imageCount === attachments.length) {
+            content = `Sent ${imageCount} images`;
+            type = 'image';
+          } else if (fileCount === attachments.length) {
+            content = `Sent ${fileCount} files`;
+            type = 'file';
+          } else {
+            content = `Sent ${imageCount} images and ${fileCount} files`;
+            type = 'file';
+          }
+        }
+      }
     } 
     // Handle JSON data (text messages)
     else {
@@ -100,7 +266,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!content && attachments.length === 0) {
+    if (!content.trim() && attachments.length === 0) {
       return NextResponse.json(
         { error: "content or attachments are required" },
         { status: 400 }
@@ -119,7 +285,7 @@ export async function POST(req: NextRequest) {
 
     // Verify user is part of the chat
     const isParticipant = chat.users.some(
-      (userId: string) => userId.toString() === user._id.toString()
+      (userId: Types.ObjectId) => userId.toString() === user._id.toString()
     );
 
     if (!isParticipant) {
@@ -132,7 +298,7 @@ export async function POST(req: NextRequest) {
     // Determine receiver (the other user in the chat)
     const sender = user._id.toString();
     const receiver = chat.users.find(
-      (userId: string) => userId.toString() !== sender
+      (userId: Types.ObjectId) => userId.toString() !== sender
     );
 
     if (!receiver) {
@@ -147,29 +313,34 @@ export async function POST(req: NextRequest) {
       conversation: chatId || conversation,
       sender,
       receiver: receiver.toString(),
-      content,
-      attachments,
+      content: content.trim(),
+      attachments: attachments.length > 0 ? attachments : undefined,
       type,
       status: "sent",
     });
 
-    // Update the chat's lastMessage field with the message ID (ObjectId reference)
+    // Update the chat's lastMessage field
     await OrderModel.findByIdAndUpdate(
       chatId || conversation,
       {
-        lastMessage: newMessage._id, 
+        lastMessage: newMessage._id,
+        updatedAt: new Date(),
       }
     );
 
-    // Populate sender information for response
-  const messages = await MessageModel.find({ 
+    // Populate and return all messages in the conversation
+    const messages = await MessageModel.find({ 
       conversation: chatId || conversation 
     })
-      .sort({ createdAt: 1 }) // Sort by oldest first
-      .lean(); // Convert to plain JavaScript objects for better performance
+      .populate("sender", "firstName lastName avatar")
+      .populate("receiver", "firstName lastName avatar")
+      .sort({ createdAt: 1 })
+      .lean();
+
     return NextResponse.json(
       {
         success: true,
+        message: newMessage,
         messages: messages,
       },
       { status: 201 }
@@ -177,7 +348,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error sending message:", error);
     
-    // Provide more specific error messages
     if (error instanceof Error) {
       return NextResponse.json(
         { error: `Failed to send message: ${error.message}` },
@@ -192,7 +362,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Optional: GET endpoint to retrieve messages
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -226,7 +395,7 @@ export async function GET(req: NextRequest) {
     }
 
     const isParticipant = chat.users.some(
-      (userId: string) => userId.toString() === user._id.toString()
+      (userId: Types.ObjectId) => userId.toString() === user._id.toString()
     );
 
     if (!isParticipant) {
@@ -240,9 +409,10 @@ export async function GET(req: NextRequest) {
     const messages = await MessageModel.find({
       conversation: conversationId,
     })
-      .sort({ createdAt: 1 })
       .populate("sender", "firstName lastName avatar")
-      .populate("receiver", "firstName lastName avatar");
+      .populate("receiver", "firstName lastName avatar")
+      .sort({ createdAt: 1 })
+      .lean();
 
     // Mark messages as read
     await MessageModel.updateMany(

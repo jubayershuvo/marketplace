@@ -63,6 +63,7 @@ export interface User {
   education: string[];
   languages: string[];
   lastLogin: string;
+  lastSeen: string;
   lastLoginIp: string;
   location: string;
   memberSince: string;

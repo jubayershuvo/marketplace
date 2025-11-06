@@ -1,63 +1,58 @@
 "use client";
 import { useEffect, useState } from "react";
-import { MapPin, Star, Edit2, Save, X } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { MapPin, Star, Edit2, Save, X, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAppSelector } from "@/lib/hooks";
 import Loading from "./Loading";
 import axios from "axios";
 
-// Type definitions
-interface Gig {
-  _id: string;
-  title: string;
-  images: string[];
-  price: number;
-}
-
-interface Review {
-  _id: string;
-  client: string;
-  img: string;
-  rating: number;
-  text: string;
-}
-
-interface BaseProfile {
+// Type definitions based on your User interface
+export interface User {
   _id: string;
   firstName: string;
   lastName: string;
+  displayName: string;
+  companyName: string;
+  username: string;
+  email: string;
+  userType: "guest" | "client" | "freelancer";
   avatar: string;
-  location: string;
-  userType: "freelancer" | "client";
+  level: string;
+  isEmailVerified: boolean;
+  isPhoneVerified: boolean;
+  isBanned: boolean;
+  isActive: boolean;
+  loginAttempts: number;
   createdAt: string;
+  updatedAt: string;
+  __v: number;
+  certifications: string[];
+  completedOrders: number;
+  earnings: number;
+  education: string[];
+  languages: string[];
+  lastLogin: string;
+  lastSeen: string;
+  lastLoginIp: string;
+  location: string;
+  memberSince: string;
+  ordersCount: number;
+  pendingBalance: number;
+  pendingOrders: number;
+  responseTime: string;
+  reviewsCount: number;
+  rating: number;
+  skills: string[];
+  spent: number;
 }
-
-interface FreelancerProfile extends BaseProfile {
-  displayName?: string;
-  description?: string;
-  skills?: string[];
-  rating?: number;
-  completedOrders?: number;
-  responseTime?: string;
-  gigs?: Gig[];
-  reviews?: Review[];
-}
-
-interface ClientProfile extends BaseProfile {
-  companyName?: string;
-  companyDescription?: string;
-  spent?: number;
-}
-
-type Profile = FreelancerProfile | ClientProfile;
 
 // Type guards
-function isFreelancer(profile: Profile): profile is FreelancerProfile {
-  return profile.userType === "freelancer";
+function isFreelancer(user: User): boolean {
+  return user.userType === "freelancer";
 }
 
-function isClient(profile: Profile): profile is ClientProfile {
-  return profile.userType === "client";
+function isClient(user: User): boolean {
+  return user.userType === "client";
 }
 
 // Helper type for array fields
@@ -65,48 +60,95 @@ type ArrayField<T> = {
   [K in keyof T]: T[K] extends string[] ? K : never;
 }[keyof T];
 
-type ProfileArrayField = ArrayField<Profile>;
+type UserArrayField = ArrayField<User>;
 
-// Union of all editable fields across all profile types
-type EditableField =
-  | keyof BaseProfile
-  | keyof FreelancerProfile
-  | keyof ClientProfile;
-
-// Exclude non-editable fields
+// Editable fields (excluding non-editable fields)
 type ExcludedFields =
   | "_id"
+  | "username"
+  | "email"
   | "userType"
-  | "gigs"
-  | "reviews"
-  | "rating"
+  | "level"
+  | "isEmailVerified"
+  | "isPhoneVerified"
+  | "isBanned"
+  | "isActive"
+  | "loginAttempts"
+  | "createdAt"
+  | "updatedAt"
+  | "__v"
   | "completedOrders"
+  | "earnings"
+  | "lastLogin"
+  | "lastSeen"
+  | "lastLoginIp"
+  | "memberSince"
+  | "ordersCount"
+  | "pendingBalance"
+  | "pendingOrders"
   | "responseTime"
+  | "reviewsCount"
+  | "rating"
   | "spent";
-type AllowedEditableField = Exclude<EditableField, ExcludedFields>;
+
+type AllowedEditableField = Exclude<keyof User, ExcludedFields>;
 
 export default function Profile({ id }: { id: string }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState<Profile>({
+  const [user, setUser] = useState<User>({
     _id: "",
     firstName: "",
     lastName: "",
+    displayName: "",
+    companyName: "",
+    username: "",
+    email: "",
+    userType: "guest",
     avatar: "",
-    location: "",
-    userType: "freelancer",
+    level: "",
+    isEmailVerified: false,
+    isPhoneVerified: false,
+    isBanned: false,
+    isActive: false,
+    loginAttempts: 0,
     createdAt: "",
+    updatedAt: "",
+    __v: 0,
+    certifications: [],
+    completedOrders: 0,
+    earnings: 0,
+    education: [],
+    languages: [],
+    lastLogin: "",
+    lastSeen: "",
+    lastLoginIp: "",
+    location: "",
+    memberSince: "",
+    ordersCount: 0,
+    pendingBalance: 0,
+    pendingOrders: 0,
+    responseTime: "",
+    reviewsCount: 0,
+    rating: 0,
+    skills: [],
+    spent: 0,
   });
-  const [editForm, setEditForm] = useState<Profile>(profile);
+  const [editForm, setEditForm] = useState<User>(user);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [newSkill, setNewSkill] = useState("");
+  const [newLanguage, setNewLanguage] = useState("");
+  const [newEducation, setNewEducation] = useState("");
+  const [newCertification, setNewCertification] = useState("");
 
   // Hooks
-  const { user } = useAppSelector((state) => state.userAuth);
+  const { user: currentUser } = useAppSelector((state) => state.userAuth);
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
-    if (user?._id === id || user.username === id) {
+    if (currentUser?._id === id || currentUser?.username === id) {
       router.push("/profile");
     }
 
@@ -119,7 +161,7 @@ export default function Profile({ id }: { id: string }) {
         );
         const data = response.data;
         const userData = data.user;
-        setProfile(userData);
+        setUser(userData);
         setEditForm(userData);
       } catch (error: unknown) {
         console.error("Error fetching data:", error);
@@ -136,7 +178,7 @@ export default function Profile({ id }: { id: string }) {
     };
 
     fetchData();
-  }, [id, router, user._id, user?.username]);
+  }, [id, router, currentUser?._id, currentUser?.username]);
 
   if (!mounted) {
     return null;
@@ -153,8 +195,29 @@ export default function Profile({ id }: { id: string }) {
 
   const handleSave = async () => {
     try {
-      setLoading(true);
-      const response = await axios.put("/api/users/update", editForm, {
+      setSaving(true);
+      
+      // Prepare data with only allowed editable fields
+      const updateData: Partial<User> = {
+        _id: editForm._id,
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        avatar: editForm.avatar,
+        location: editForm.location,
+      };
+
+      // Add user type specific fields
+      if (isFreelancer(editForm)) {
+        updateData.displayName = editForm.displayName;
+        updateData.skills = editForm.skills || [];
+        updateData.languages = editForm.languages || [];
+        updateData.education = editForm.education || [];
+        updateData.certifications = editForm.certifications || [];
+      } else if (isClient(editForm)) {
+        updateData.companyName = editForm.companyName;
+      }
+
+      const response = await axios.put("/api/users/post-update", updateData, {
         withCredentials: true,
       });
 
@@ -165,7 +228,7 @@ export default function Profile({ id }: { id: string }) {
       const result = response.data;
 
       if (result.success) {
-        setProfile(response.data.user);
+        setUser(response.data.user);
         setIsEditing(false);
         console.log("Profile updated successfully");
       } else {
@@ -175,16 +238,20 @@ export default function Profile({ id }: { id: string }) {
       console.error("Error updating profile:", error);
       alert("Failed to update profile. Please try again.");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
-    setEditForm(profile);
+    setEditForm(user);
     setIsEditing(false);
+    setNewSkill("");
+    setNewLanguage("");
+    setNewEducation("");
+    setNewCertification("");
   };
 
-  const handleArrayAdd = (field: ProfileArrayField, value: string) => {
+  const handleArrayAdd = (field: UserArrayField, value: string) => {
     if (value.trim()) {
       setEditForm((prev) => {
         const currentArray = (prev[field] as string[]) || [];
@@ -196,7 +263,7 @@ export default function Profile({ id }: { id: string }) {
     }
   };
 
-  const handleArrayRemove = (field: ProfileArrayField, index: number) => {
+  const handleArrayRemove = (field: UserArrayField, index: number) => {
     setEditForm((prev) => {
       const currentArray = (prev[field] as string[]) || [];
       return {
@@ -213,84 +280,348 @@ export default function Profile({ id }: { id: string }) {
     }));
   };
 
-  const canEdit = user && profile._id === user._id;
+  const handleAvatarChange = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      
+      const response = await axios.post("/api/upload-avatar", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        withCredentials: true,
+      });
+
+      if (response.data.success) {
+        setEditForm(prev => ({
+          ...prev,
+          avatar: response.data.avatarUrl
+        }));
+        console.log("Avatar updated successfully");
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      alert("Failed to upload avatar. Please try again.");
+    }
+  };
+
+  const canEdit = currentUser && user._id === currentUser._id;
+
+  // Render freelancer-specific editing fields
+  const renderFreelancerEditingFields = () => {
+    if (!isFreelancer(editForm)) return null;
+
+    return (
+      <div>
+        <label className="block text-sm font-medium mb-1">Professional Title</label>
+        <input
+          type="text"
+          value={editForm.displayName || ""}
+          onChange={(e) =>
+            handleInputChange("displayName", e.target.value)
+          }
+          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+          placeholder="e.g., Senior Web Developer"
+        />
+      </div>
+    );
+  };
+
+  // Render client-specific editing fields
+  const renderClientEditingFields = () => {
+    if (!isClient(editForm)) return null;
+
+    return (
+      <div>
+        <label className="block text-sm font-medium mb-1">Company Name</label>
+        <input
+          type="text"
+          value={editForm.companyName || ""}
+          onChange={(e) =>
+            handleInputChange("companyName", e.target.value)
+          }
+          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+          placeholder="Enter your company name"
+        />
+      </div>
+    );
+  };
+
+  // Render array editing section for freelancers
+  const renderFreelancerArraySections = () => {
+    if (!isFreelancer(editForm)) return null;
+
+    return (
+      <>
+        {/* Skills Section */}
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Skills</h3>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {editForm.skills?.map((skill, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm flex items-center gap-2"
+                >
+                  {skill}
+                  <button
+                    onClick={() => handleArrayRemove("skills", index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                placeholder="Add a skill"
+                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleArrayAdd("skills", newSkill);
+                    setNewSkill("");
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  handleArrayAdd("skills", newSkill);
+                  setNewSkill("");
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Languages Section */}
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Languages</h3>
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {editForm.languages?.map((language, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-sm flex items-center gap-2"
+                >
+                  {language}
+                  <button
+                    onClick={() => handleArrayRemove("languages", index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newLanguage}
+                onChange={(e) => setNewLanguage(e.target.value)}
+                placeholder="Add a language"
+                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleArrayAdd("languages", newLanguage);
+                    setNewLanguage("");
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  handleArrayAdd("languages", newLanguage);
+                  setNewLanguage("");
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Education Section */}
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Education</h3>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {editForm.education?.map((edu, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span>{edu}</span>
+                  <button
+                    onClick={() => handleArrayRemove("education", index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newEducation}
+                onChange={(e) => setNewEducation(e.target.value)}
+                placeholder="Add education (e.g., Bachelor's in Computer Science)"
+                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleArrayAdd("education", newEducation);
+                    setNewEducation("");
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  handleArrayAdd("education", newEducation);
+                  setNewEducation("");
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Certifications Section */}
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Certifications</h3>
+          <div className="space-y-3">
+            <div className="space-y-2">
+              {editForm.certifications?.map((cert, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span>{cert}</span>
+                  <button
+                    onClick={() => handleArrayRemove("certifications", index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newCertification}
+                onChange={(e) => setNewCertification(e.target.value)}
+                placeholder="Add certification (e.g., AWS Certified Solutions Architect)"
+                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleArrayAdd("certifications", newCertification);
+                    setNewCertification("");
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  handleArrayAdd("certifications", newCertification);
+                  setNewCertification("");
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  };
 
   return (
     <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
       {/* Profile Header */}
       <section className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <img
-            src={profile.avatar || "/api/placeholder/128/128"}
-            alt={`${profile.firstName} ${profile.lastName}`}
-            className="w-32 h-32 rounded-full border-4 border-green-600"
-          />
+          <div className="relative">
+            <img
+              src={editForm.avatar || "/api/placeholder/128/128"}
+              alt={`${editForm.firstName} ${editForm.lastName}`}
+              className="w-32 h-32 rounded-full border-4 border-green-600 object-cover"
+            />
+            {isEditing && (
+              <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/*';
+                  input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (file) {
+                      handleAvatarChange(file);
+                    }
+                  };
+                  input.click();
+                }}
+                className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700"
+              >
+                <Upload size={16} />
+              </button>
+            )}
+          </div>
           <div className="flex-1 text-center md:text-left">
             {isEditing ? (
-              <div className="space-y-3">
-                <div className="flex gap-2">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">First Name</label>
+                    <input
+                      type="text"
+                      value={editForm.firstName}
+                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                      placeholder="First Name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Last Name</label>
+                    <input
+                      type="text"
+                      value={editForm.lastName}
+                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                      placeholder="Last Name"
+                    />
+                  </div>
+                </div>
+
+                {/* User Type Specific Fields */}
+                {isFreelancer(editForm) && renderFreelancerEditingFields()}
+                {isClient(editForm) && renderClientEditingFields()}
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Location</label>
                   <input
                     type="text"
-                    value={editForm.firstName}
-                    onChange={(e) =>
-                      handleInputChange("firstName", e.target.value)
-                    }
-                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                    placeholder="First Name"
-                  />
-                  <input
-                    type="text"
-                    value={editForm.lastName}
-                    onChange={(e) =>
-                      handleInputChange("lastName", e.target.value)
-                    }
-                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                    placeholder="Last Name"
+                    value={editForm.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    placeholder="Location"
                   />
                 </div>
 
-                {isFreelancer(editForm) ? (
-                  <input
-                    type="text"
-                    value={editForm.displayName || ""}
-                    onChange={(e) =>
-                      handleInputChange("displayName", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                    placeholder="Professional Title"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    value={isClient(editForm) ? editForm.companyName || "" : ""}
-                    onChange={(e) =>
-                      handleInputChange("companyName", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                    placeholder="Company Name"
-                  />
-                )}
-
-                <input
-                  type="text"
-                  value={editForm.location}
-                  onChange={(e) =>
-                    handleInputChange("location", e.target.value)
-                  }
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                  placeholder="Location"
-                />
-
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-4">
                   <button
                     onClick={handleSave}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    disabled={saving}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Save size={16} /> Save
+                    <Save size={16} /> {saving ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center gap-2"
+                    disabled={saving}
+                    className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center gap-2 disabled:opacity-50"
                   >
                     <X size={16} /> Cancel
                   </button>
@@ -299,34 +630,38 @@ export default function Profile({ id }: { id: string }) {
             ) : (
               <>
                 <h2 className="text-3xl font-bold">
-                  {profile.firstName} {profile.lastName}
+                  {user.firstName} {user.lastName}
                 </h2>
-                <p className="text-green-600 font-semibold">
-                  {isFreelancer(profile)
-                    ? profile.displayName ||
-                      `${profile.firstName} ${profile.lastName}`
-                    : profile.companyName ||
-                      `${profile.firstName} ${profile.lastName}`}
+                <p className="text-green-600 font-semibold text-lg mt-1">
+                  {isFreelancer(user)
+                    ? user.displayName || `${user.firstName} ${user.lastName}`
+                    : isClient(user)
+                    ? user.companyName || `${user.firstName} ${user.lastName}`
+                    : `${user.firstName} ${user.lastName}`}
                 </p>
 
-                {isFreelancer(profile) && (
+                {isFreelancer(user) && (
                   <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
-                    <Star
-                      className="text-yellow-500 fill-yellow-500"
-                      size={18}
-                    />
+                    <Star className="text-yellow-500 fill-yellow-500" size={18} />
                     <span>
-                      {profile.rating || 0} ({profile.reviews?.length || 0}{" "}
+                      {user.rating?.toFixed(1) || "0.0"} ({user.reviewsCount || 0}{" "}
                       reviews)
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400 md:text-center">
-                  <MapPin size={16} /> {profile.location}
+                <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400">
+                  <MapPin size={16} /> {user.location}
                 </div>
+                
+                {isClient(user) && user.companyName && (
+                  <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400">
+                    <span>Company: {user.companyName}</span>
+                  </div>
+                )}
+
                 {canEdit && (
-                  <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400 md:text-center">
+                  <div className="flex justify-center md:justify-start">
                     <button
                       onClick={() => setIsEditing(true)}
                       className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -343,39 +678,43 @@ export default function Profile({ id }: { id: string }) {
 
       {/* Stats */}
       <section className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center border-t dark:border-gray-800">
-        {isFreelancer(profile) ? (
+        {isFreelancer(user) ? (
           <>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
               <p className="text-2xl font-bold text-green-600">
-                {profile.completedOrders || 0}
+                {user.completedOrders || 0}
               </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 completed
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-              <p className="text-2xl font-bold text-green-600">5</p>
+              <p className="text-2xl font-bold text-green-600">
+                {user.pendingOrders || 0}
+              </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 pending
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-              <p className="text-2xl font-bold text-green-600">2</p>
+              <p className="text-2xl font-bold text-green-600">
+                {user.ordersCount || 0}
+              </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
-                canceled
+                total orders
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
               <p className="text-2xl font-bold text-green-600">
-                {profile.gigs?.length || 0}
+                ৳ {(user.earnings || 0).toLocaleString()}
               </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
-                gigs
+                earnings
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
               <p className="text-2xl font-bold text-green-600">
-                {profile.responseTime || "N/A"}
+                {user.responseTime || "N/A"}
               </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 response time
@@ -383,7 +722,7 @@ export default function Profile({ id }: { id: string }) {
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
               <p className="text-2xl font-bold text-green-600">
-                {getYear(profile.createdAt)}
+                {getYear(user.createdAt)}
               </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 member since
@@ -394,40 +733,48 @@ export default function Profile({ id }: { id: string }) {
           <>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
               <p className="text-2xl font-bold text-green-600">
-                {isClient(profile) ? profile.spent || 0 : 0}
+                ৳ {(user.spent || 0).toLocaleString()}
               </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 total spent
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-              <p className="text-2xl font-bold text-green-600">12</p>
+              <p className="text-2xl font-bold text-green-600">
+                {user.ordersCount || 0}
+              </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
-                active projects
+                total orders
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-              <p className="text-2xl font-bold text-green-600">4.8</p>
-              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
-                avg rating
+              <p className="text-2xl font-bold text-green-600">
+                {user.completedOrders || 0}
               </p>
-            </div>
-            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-              <p className="text-2xl font-bold text-green-600">8</p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 completed
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
               <p className="text-2xl font-bold text-green-600">
-                {getYear(profile.createdAt)}
+                {user.pendingOrders || 0}
+              </p>
+              <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
+                pending
+              </p>
+            </div>
+            <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
+              <p className="text-2xl font-bold text-green-600">
+                {getYear(user.createdAt)}
               </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 member since
               </p>
             </div>
             <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800 shadow">
-              <p className="text-2xl font-bold text-green-600">15</p>
+              <p className="text-2xl font-bold text-green-600">
+                {user.reviewsCount || 0}
+              </p>
               <p className="capitalize text-sm text-gray-600 dark:text-gray-400">
                 reviews given
               </p>
@@ -436,176 +783,76 @@ export default function Profile({ id }: { id: string }) {
         )}
       </section>
 
-      {/* About */}
-      <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-        <h3 className="text-xl font-bold mb-3">
-          {isFreelancer(profile) ? "About Me" : "About Company"}
-        </h3>
-        {isEditing ? (
-          <textarea
-            value={
-              isFreelancer(editForm)
-                ? editForm.description || ""
-                : isClient(editForm)
-                ? editForm.companyDescription || ""
-                : ""
-            }
-            onChange={(e) =>
-              handleInputChange(
-                (isFreelancer(editForm)
-                  ? "description"
-                  : "companyDescription") as AllowedEditableField,
-                e.target.value
-              )
-            }
-            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 h-32 resize-none"
-            placeholder={
-              isFreelancer(editForm)
-                ? "Tell clients about yourself..."
-                : "Describe your company..."
-            }
-          />
-        ) : (
-          <p className="text-gray-600 dark:text-gray-400">
-            {isFreelancer(profile)
-              ? profile.description || "No description provided."
-              : isClient(profile)
-              ? profile.companyDescription || "No company description provided."
-              : "No description provided."}
-          </p>
-        )}
-      </section>
-
       {/* Skills - Only for Freelancers */}
-      {isFreelancer(profile) && (
+      {isFreelancer(user) && (
         <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
           <h3 className="text-xl font-bold mb-3">Skills</h3>
           {isEditing ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {isFreelancer(editForm) &&
-                  editForm.skills?.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm flex items-center gap-2"
-                    >
-                      {skill}
-                      <button
-                        onClick={() =>
-                          handleArrayRemove(
-                            "skills" as ProfileArrayField,
-                            index
-                          )
-                        }
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X size={14} />
-                      </button>
-                    </span>
-                  ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Add a skill (press Enter)"
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleArrayAdd(
-                      "skills" as ProfileArrayField,
-                      e.currentTarget.value
-                    );
-                    e.currentTarget.value = "";
-                  }
-                }}
-              />
-            </div>
+            renderFreelancerArraySections()
           ) : (
             <div className="flex flex-wrap gap-3">
-              {isFreelancer(profile) &&
-                profile.skills?.map((skill, i) => (
-                  <span
-                    key={i}
-                    className="px-4 py-2 rounded-full border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              {isFreelancer(profile) &&
-                (!profile.skills || profile.skills.length === 0) && (
-                  <p className="text-gray-600 dark:text-gray-400">
-                    No skills added yet.
-                  </p>
-                )}
+              {user.skills?.map((skill, i) => (
+                <span
+                  key={i}
+                  className="px-4 py-2 rounded-full border dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm"
+                >
+                  {skill}
+                </span>
+              ))}
+              {(!user.skills || user.skills.length === 0) && (
+                <p className="text-gray-600 dark:text-gray-400">
+                  No skills added yet.
+                </p>
+              )}
             </div>
           )}
         </section>
       )}
 
-      {/* Gigs - Only for Freelancers */}
-      {isFreelancer(profile) && profile.gigs && profile.gigs.length > 0 && (
+      {/* Languages - Only for Freelancers */}
+      {isFreelancer(user) && user.languages && user.languages.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-          <h3 className="text-xl font-bold mb-3">My Gigs</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {profile.gigs.map((gig) => (
-              <div
-                key={gig._id}
-                className="rounded-xl overflow-hidden shadow hover:shadow-lg bg-white dark:bg-gray-800"
+          <h3 className="text-xl font-bold mb-3">Languages</h3>
+          <div className="flex flex-wrap gap-3">
+            {user.languages.map((language, i) => (
+              <span
+                key={i}
+                className="px-4 py-2 rounded-full border dark:border-gray-700 bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300 text-sm"
               >
-                <img
-                  src={gig.images[0] || "/api/placeholder/300/160"}
-                  alt={gig.title}
-                  className="w-full h-40 object-cover"
-                />
-                <div className="p-4">
-                  <h4 className="font-bold">{gig.title}</h4>
-                  <p className="text-green-600 font-semibold mt-2">
-                    ৳ {gig.price.toLocaleString()}
-                  </p>
-                  <button className="mt-3 w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                    Order Now
-                  </button>
-                </div>
+                {language}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Education - Only for Freelancers */}
+      {isFreelancer(user) && user.education && user.education.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Education</h3>
+          <div className="space-y-3">
+            {user.education.map((edu, i) => (
+              <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                {edu}
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* Reviews - Only for Freelancers */}
-      {isFreelancer(profile) &&
-        profile.reviews &&
-        profile.reviews.length > 0 && (
-          <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-            <h3 className="text-xl font-bold mb-3">Client Reviews</h3>
-            <div className="space-y-6">
-              {profile.reviews.map((r) => (
-                <div
-                  key={r._id}
-                  className="p-6 rounded-xl bg-gray-50 dark:bg-gray-800 border dark:border-gray-700 shadow"
-                >
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={r.img}
-                      alt={r.client}
-                      className="w-12 h-12 rounded-full"
-                    />
-                    <div>
-                      <h4 className="font-bold">{r.client}</h4>
-                      <div className="flex items-center gap-1 text-yellow-500">
-                        {Array.from({ length: r.rating }).map((_, i) => (
-                          <Star key={i} size={16} className="fill-yellow-500" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-gray-600 dark:text-gray-400">
-                    {r.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+      {/* Certifications - Only for Freelancers */}
+      {isFreelancer(user) && user.certifications && user.certifications.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+          <h3 className="text-xl font-bold mb-3">Certifications</h3>
+          <div className="space-y-3">
+            {user.certifications.map((cert, i) => (
+              <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                {cert}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

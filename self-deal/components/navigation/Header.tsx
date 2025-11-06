@@ -205,8 +205,9 @@ const navData: {
     },
     {
       label: "Notifications",
-      isAction: true,
+      // isAction: true,
       userTypes: ["freelancer", "client"],
+      href:"/notifications"
     },
   ],
 };

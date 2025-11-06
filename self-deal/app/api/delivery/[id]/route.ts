@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { DeliveryModel } from "@/models/Delivery";
 import { connectDB } from "@/lib/mongodb";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 // 🧩 Connect to MongoDB
 async function dbConnect() {
   if (mongoose.connection.readyState === 0) {
@@ -14,12 +12,13 @@ async function dbConnect() {
 // 🟢 GET /api/delivery/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
+    const {id} = await params;
 
-    const delivery = await DeliveryModel.findById(params.id).populate("order");
+    const delivery = await DeliveryModel.findById(id).populate("order");
     if (!delivery) {
       return NextResponse.json(
         { error: "Delivery not found" },
@@ -40,7 +39,7 @@ export async function GET(
 // 🟠 PUT /api/delivery/[id]
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await dbConnect();
@@ -50,8 +49,9 @@ export async function PUT(
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    const delivery = await DeliveryModel.findByIdAndUpdate(
-      params.id,
+    const {id } = await params;
+
+    const delivery = await DeliveryModel.findByIdAndUpdate(id,
       { status },
       { new: true }
     );

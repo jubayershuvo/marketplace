@@ -2,7 +2,6 @@
 import React, { use, useEffect, useState } from "react";
 import {
   Plus,
-  Trash2,
   Star,
   DollarSign,
   Eye,
@@ -130,15 +129,6 @@ const MyGigManager = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleDeleteGig = (id: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this gig? This action cannot be undone."
-      )
-    ) {
-      setGigs(gigs.filter((gig) => gig._id !== id));
-    }
-  };
 
   const handleViewGig = (id: string) => {
     window.location.href = `/gig/${id}`;
@@ -490,13 +480,6 @@ const MyGigManager = () => {
                       >
                         <Eye className="w-4 h-4" />
                         View Gig
-                      </button>
-                      <button
-                        onClick={() => handleDeleteGig(gig._id)}
-                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors"
-                        title="Delete Gig"
-                      >
-                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
