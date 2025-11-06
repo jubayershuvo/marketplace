@@ -93,7 +93,7 @@ type ExcludedFields =
 
 type AllowedEditableField = Exclude<keyof User, ExcludedFields>;
 
-export default function Profile({ id }: { id: string }) {
+export default function Profile({ id }: { id?: string }) {
   const [isEditing, setIsEditing] = useState(false);
   const [user, setUser] = useState<User>({
     _id: "",
