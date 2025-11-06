@@ -7,15 +7,15 @@ import {
   CreditCard,
   Phone,
 } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loading from "./Loading";
 
 interface PaymentPageProps {
-  amount?: number;
+  id: string;
 }
 
-const PaymentPage: React.FC<PaymentPageProps> = () => {
+const PaymentPage: React.FC<PaymentPageProps> = ({id}:{id:string}) => {
   const [selectedMethod, setSelectedMethod] = useState<"nagad" | "bkash" | "">(
     ""
   );
@@ -26,9 +26,7 @@ const PaymentPage: React.FC<PaymentPageProps> = () => {
     ""
   );
   const [amount, setAmount] = useState<number>(0);
-  const params = useSearchParams();
   const router = useRouter();
-  const id = params.get("id");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

@@ -199,7 +199,7 @@ const ViewGigPage = ({ id }: { id: string }) => {
       return; // Prevent freelancers from ordering
     }
     // Handle buy now logic here
-    router.push(`/payment?id=${gig._id}`);
+    router.push(`/payment/${gig._id}`);
   };
 
   return (
