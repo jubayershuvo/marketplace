@@ -9,7 +9,7 @@ export interface Stats {
   memberSince: string;
 }
 
-export interface IGig {
+export interface Gig {
   _id: string;
   title: string;
   price: number; // BDT
@@ -34,7 +34,7 @@ export interface Review {
 
 export interface ProfileData {
   profile: User;
-  gigs: IGig[];
+  gigs: Gig[];
   portfolio: PortfolioItem[];
   reviews: Review[];
 }
