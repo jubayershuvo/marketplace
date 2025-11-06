@@ -49,6 +49,8 @@ export interface User {
   userType: "guest" | "client" | "freelancer";
   avatar: string;
   level: string;
+  phone: string;
+  phoneCountry: string;
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   isBanned: boolean;
