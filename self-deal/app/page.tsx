@@ -16,6 +16,8 @@ export default async function Home() {
   const serializedUsers = users.map(user => ({
     ...user,
     _id: user._id.toString(),
+    updatedAt: user.updatedAt.toISOString(),
+    createdAt: user.createdAt.toISOString(),
   }));
 const categories = await db.collection("categories").find({}).toArray();
 const categoyArray = categories.map((category) => category.label);
