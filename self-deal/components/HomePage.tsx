@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { User } from "@/types/Profile";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 // JSON Data
 const categories = [
@@ -15,7 +16,6 @@ const categories = [
   "SEO",
   "UI/UX Design",
 ];
-
 
 const testimonials = [
   {
@@ -34,8 +34,15 @@ const testimonials = [
   },
 ];
 
-export default function HomePage({freelancers}:{freelancers:User[]}) {
+export default function HomePage({
+  freelancers,
+  categories,
+}: {
+  freelancers: User[];
+  categories: string[];
+}) {
   const router = useRouter();
+  const [q, setQ] = useState("");
   return (
     <div>
       <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
@@ -54,12 +61,19 @@ export default function HomePage({freelancers}:{freelancers:User[]}) {
           </p>
           <div className="mt-6 flex items-center max-w-xl mx-auto rounded-lg border dark:border-gray-700 overflow-hidden">
             <input
+              value={q}
               type="text"
               placeholder="Try 'Web Developer'"
               className="flex-1 px-4 py-3 focus:outline-none dark:bg-gray-900"
+              onChange={(e) => setQ(e.target.value)}
             />
-            <button className="px-5 py-3 bg-green-600 text-white flex items-center gap-2 hover:bg-green-700">
-              <Search size={18} /> Search
+            <button
+              onClick={() => {
+                router.push(`/search?q=${q}`);
+              }}
+              className="px-5 py-3 cursor-pointer bg-green-600 text-white flex items-center gap-2 hover:bg-green-700"
+            >
+              <Search className="" size={18} /> Search
             </button>
           </div>
         </section>
@@ -71,6 +85,9 @@ export default function HomePage({freelancers}:{freelancers:User[]}) {
             {categories.map((cat, i) => (
               <div
                 key={i}
+                onClick={() => {
+                  router.push(`/search?q=${cat}`);
+                }}
                 className="p-6 rounded-2xl border dark:border-gray-700 shadow hover:shadow-lg cursor-pointer text-center bg-white dark:bg-gray-800"
               >
                 {cat}
@@ -96,7 +113,9 @@ export default function HomePage({freelancers}:{freelancers:User[]}) {
                     className="w-16 h-16 rounded-full"
                   />
                   <div>
-                    <h4 className="font-bold">{f.firstName + " " + f.lastName}</h4>
+                    <h4 className="font-bold">
+                      {f.firstName + " " + f.lastName}
+                    </h4>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {f.displayName}
                     </p>
@@ -109,9 +128,12 @@ export default function HomePage({freelancers}:{freelancers:User[]}) {
                 </p>
 
                 {/* Button aligned to bottom */}
-                <button onClick={()=>{
-                  router.push(`/profile/${f._id}`);
-                }} className="mt-auto cursor-pointer w-full py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+                <button
+                  onClick={() => {
+                    router.push(`/profile/${f._id}`);
+                  }}
+                  className="mt-auto cursor-pointer w-full py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                >
                   View Profile
                 </button>
               </div>

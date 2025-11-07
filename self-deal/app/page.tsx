@@ -4,7 +4,7 @@ import UserModel from "@/models/User";
 import { User } from "@/types/Profile";
 
 export default async function Home() {
-  await connectDB();
+  const db = await connectDB();
   const users = await UserModel.find({
     userType: "freelancer",
   })
@@ -17,6 +17,7 @@ export default async function Home() {
     ...user,
     _id: user._id.toString(),
   }));
-
-  return <HomePage freelancers={serializedUsers as User[]} />;
+const categories = await db.collection("categories").find({}).toArray();
+const categoyArray = categories.map((category) => category.label);
+  return <HomePage freelancers={serializedUsers as User[]} categories={categoyArray} />;
 }

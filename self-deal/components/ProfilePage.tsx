@@ -44,6 +44,7 @@ export interface User {
   rating: number;
   skills: string[];
   spent: number;
+  description: string; // Added description field
 }
 
 // Type guards
@@ -132,6 +133,7 @@ export default function Profile({ id }: { id?: string }) {
     rating: 0,
     skills: [],
     spent: 0,
+    description: "", // Added description field
   });
   const [editForm, setEditForm] = useState<User>(user);
   const [loading, setLoading] = useState(true);
@@ -204,6 +206,7 @@ export default function Profile({ id }: { id?: string }) {
         lastName: editForm.lastName,
         avatar: editForm.avatar,
         location: editForm.location,
+        description: editForm.description, // Added description field
       };
 
       // Add user type specific fields
@@ -610,6 +613,18 @@ export default function Profile({ id }: { id?: string }) {
                   />
                 </div>
 
+                {/* Description Field */}
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea
+                    value={editForm.description || ""}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 min-h-[100px] resize-vertical"
+                    placeholder="Tell us about yourself..."
+                    rows={4}
+                  />
+                </div>
+
                 <div className="flex gap-2 pt-4">
                   <button
                     onClick={handleSave}
@@ -657,6 +672,15 @@ export default function Profile({ id }: { id?: string }) {
                 {isClient(user) && user.companyName && (
                   <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400">
                     <span>Company: {user.companyName}</span>
+                  </div>
+                )}
+
+                {/* Description Display */}
+                {user.description && (
+                  <div className="mt-4 max-w-2xl">
+                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {user.description}
+                    </p>
                   </div>
                 )}
 
