@@ -1,4 +1,5 @@
 // profileTypes.ts
+import { ObjectId } from "mongodb";
 
 export interface Stats {
   completed: number;
@@ -39,44 +40,55 @@ export interface ProfileData {
   reviews: Review[];
 }
 export interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  displayName: string;
-  companyName: string;
-  username: string;
-  email: string;
-  userType: "guest" | "client" | "freelancer";
-  avatar: string;
-  level: string;
-  phone: string;
-  phoneCountry: string;
-  isEmailVerified: boolean;
-  isPhoneVerified: boolean;
-  isBanned: boolean;
-  isActive: boolean;
-  loginAttempts: number;
-  createdAt: string;
-  updatedAt: string;
-  __v: number;
-  certifications: string[];
-  completedOrders: number;
-  earnings: number;
-  education: string[];
-  languages: string[];
-  lastLogin: string;
-  lastSeen: string;
-  lastLoginIp: string;
-  location: string;
-  memberSince: string;
-  ordersCount: number;
-  pendingBalance: number;
-  pendingOrders: number;
-  responseTime: string;
-  reviewsCount: number;
-  rating: number;
-  skills: string[];
-  spent: number;
+ // Common fields
+   _id: string | ObjectId;
+   firstName: string;
+   lastName: string;
+   email: string;
+   phone?: string;
+   username: string;
+   password: string;
+   userType: "freelancer" | "client";
+   avatar?: string;
+   isEmailVerified: boolean;
+   isPhoneVerified: boolean;
+   isBanned: boolean;
+   isActive: boolean;
+   loginAttempts: number;
+   lockUntil?: Date;
+   lastLogin?: Date;
+   lastLoginIp?: string;
+   createdAt: Date;
+   updatedAt: Date;
+   location?: string;
+   responseTime?: string;
+   lastSeen?: Date;
+ 
+   // Freelancer fields
+   withdrawableBalance?: number;
+   balance: number;
+   pendingBalance?: number;
+ 
+   pendingOrders?: number;
+   displayName?: string;
+   description?: string;
+   skills?: string[];
+   languages?: string[];
+   education?: string[];
+   certifications?: string[];
+   rating?: number;
+   completedOrders: number;
+   earnings?: number;
+   lastDelivery?: string;
+   reviews?: string[];
+   reviewsCount?: number;
+ 
+   // Client fields
+   companyName?: string;
+   companyDescription?: string;
+   spent?: number;
+ 
+   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 export interface UserState {

@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { Search, Sun, Moon } from "lucide-react";
+import { Search } from "lucide-react";
+import { User } from "@/types/Profile";
 
 // JSON Data
 const categories = [
@@ -15,29 +15,6 @@ const categories = [
   "UI/UX Design",
 ];
 
-const freelancers = [
-  {
-    id: 1,
-    name: "John Doe",
-    role: "Web Developer",
-    img: "https://i.pravatar.cc/150?img=1",
-    desc: "Experienced MERN Stack Developer with 5+ years of expertise. Specializing in React, Next.js, Node.js, and MongoDB.",
-  },
-  {
-    id: 2,
-    name: "Sarah Lee",
-    role: "Graphic Designer",
-    img: "https://i.pravatar.cc/150?img=2",
-    desc: "Creative designer specializing in branding and UI assets.",
-  },
-  {
-    id: 3,
-    name: "Michael Brown",
-    role: "SEO Specialist",
-    img: "https://i.pravatar.cc/150?img=3",
-    desc: "Helping businesses rank higher with proven SEO strategies.",
-  },
-];
 
 const testimonials = [
   {
@@ -56,7 +33,7 @@ const testimonials = [
   },
 ];
 
-export default function HomePage() {
+export default function HomePage({freelancers}:{freelancers:User[]}) {
   return (
     <div>
       <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
@@ -106,27 +83,27 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {freelancers.map((f) => (
               <div
-                key={f.id}
+                key={f._id}
                 className="rounded-2xl border dark:border-gray-700 p-6 bg-white dark:bg-gray-800 shadow hover:shadow-lg flex flex-col"
               >
                 {/* Freelancer Info */}
                 <div className="flex items-center gap-4">
                   <img
-                    src={f.img}
-                    alt={f.name}
+                    src={f.avatar}
+                    alt={f.firstName + " " + f.lastName}
                     className="w-16 h-16 rounded-full"
                   />
                   <div>
-                    <h4 className="font-bold">{f.name}</h4>
+                    <h4 className="font-bold">{f.firstName + " " + f.lastName}</h4>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {f.role}
+                      {f.displayName}
                     </p>
                   </div>
                 </div>
 
                 {/* Description */}
                 <p className="mt-4 text-gray-600 dark:text-gray-400 mb-2">
-                  {f.desc}
+                  {f.description}
                 </p>
 
                 {/* Button aligned to bottom */}
