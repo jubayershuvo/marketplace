@@ -41,7 +41,7 @@ export interface ProfileData {
 }
 export interface User {
  // Common fields
-   _id: string | ObjectId;
+   _id: string ;
    firstName: string;
    lastName: string;
    email: string;

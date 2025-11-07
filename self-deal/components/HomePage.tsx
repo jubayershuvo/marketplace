@@ -2,6 +2,7 @@
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { User } from "@/types/Profile";
+import { useRouter } from "next/navigation";
 
 // JSON Data
 const categories = [
@@ -34,6 +35,7 @@ const testimonials = [
 ];
 
 export default function HomePage({freelancers}:{freelancers:User[]}) {
+  const router = useRouter();
   return (
     <div>
       <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
@@ -107,7 +109,9 @@ export default function HomePage({freelancers}:{freelancers:User[]}) {
                 </p>
 
                 {/* Button aligned to bottom */}
-                <button className="mt-auto w-full py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+                <button onClick={()=>{
+                  router.push(`/profile/${f._id}`);
+                }} className="mt-auto cursor-pointer w-full py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
                   View Profile
                 </button>
               </div>
