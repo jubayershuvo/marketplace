@@ -105,7 +105,7 @@ export default function SearchResultPage({ query }: { query: string }) {
                 </h3>
 
                 <div className="flex items-center gap-1 mt-1 text-yellow-500">
-                  {Array.from({ length: Math.round(g.freelancer.rating) }).map(
+                  {Array.from({ length: Math.round(Number(g.freelancer.rating)) }).map(
                     (_, i) => (
                       <Star key={i} size={14} className="fill-yellow-500" />
                     )
