@@ -194,7 +194,9 @@ const Messages: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [selectedChat?.id]);
 
-  const getDurationString = (lastSeen: string): string => {
+  const getDurationString = (lastSeen: string | Date): string => {
+    if (!lastSeen) return "Offline";
+
     const now = new Date();
     const lastSeenDate = new Date(lastSeen);
     const diff = now.getTime() - lastSeenDate.getTime();
