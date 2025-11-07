@@ -15,7 +15,7 @@ const initialState: UserState = {
   email: '',
   userType: "guest",
   avatar: '',
-  level: '',
+  level: 0,
   phone: '',
   phoneCountry: '',
   isEmailVerified: false,
@@ -25,7 +25,6 @@ const initialState: UserState = {
   loginAttempts: 0,
   createdAt: '',
   updatedAt: '',
-  __v: 0,
   certifications: [],
   completedOrders: 0,
   earnings: 0,
@@ -44,6 +43,11 @@ const initialState: UserState = {
   rating: 0,
   skills: [],
   spent: 0,
+  // Added to satisfy User type
+  password: '',
+  balance: 0,
+  // Dummy implementation to satisfy User type
+  comparePassword: async (_candidatePassword: string) => false,
   }
 };
 

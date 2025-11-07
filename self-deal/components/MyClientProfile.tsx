@@ -8,7 +8,6 @@ import {
   User,
   Mail,
   MapPin,
-  Calendar,
   Globe,
   Building,
   Upload,

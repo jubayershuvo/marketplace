@@ -48,7 +48,7 @@ export interface User {
    phone?: string;
    username: string;
    password: string;
-   userType: "freelancer" | "client";
+   userType: "freelancer" | "client" | "admin" | "guest";
    avatar?: string;
    isEmailVerified: boolean;
    isPhoneVerified: boolean;
@@ -56,13 +56,13 @@ export interface User {
    isActive: boolean;
    loginAttempts: number;
    lockUntil?: Date;
-   lastLogin?: Date;
+   lastLogin?: string;
    lastLoginIp?: string;
-   createdAt: Date;
-   updatedAt: Date;
+   createdAt: string;
+   updatedAt: string;
    location?: string;
    responseTime?: string;
-   lastSeen?: Date;
+   lastSeen?: string;
  
    // Freelancer fields
    withdrawableBalance?: number;
@@ -70,6 +70,7 @@ export interface User {
    pendingBalance?: number;
  
    pendingOrders?: number;
+   ordersCount?: number;
    displayName?: string;
    description?: string;
    skills?: string[];
@@ -82,6 +83,9 @@ export interface User {
    lastDelivery?: string;
    reviews?: string[];
    reviewsCount?: number;
+   level?: number;
+   phoneCountry?: string;
+   memberSince?: string;
  
    // Client fields
    companyName?: string;
