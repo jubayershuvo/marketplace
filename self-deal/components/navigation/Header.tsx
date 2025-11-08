@@ -25,6 +25,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { updateUser, userLogout } from "@/lib/userSlice";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { set } from "mongoose";
 
 // TypeScript Interfaces
 interface NavItem {
@@ -571,7 +572,9 @@ const FiverrHeader: React.FC = () => {
 
   const handleSearch = (): void => {
     if (!query) return;
+    setIsMobileMenuOpen(false);
     router.push(`/search?q=${query}`);
+    setQuery("");
   };
 
   // Don't render anything until mounted to avoid hydration mismatch

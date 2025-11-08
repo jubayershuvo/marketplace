@@ -93,7 +93,6 @@ interface Gig {
 const ViewGigPage = ({ id }: { id: string }) => {
   const [gig, setGig] = useState<Gig | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [showContactForm, setShowContactForm] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(false);
   const { user } = useAppSelector((state) => state.userAuth);
@@ -157,6 +156,13 @@ const ViewGigPage = ({ id }: { id: string }) => {
   if (loading) {
     return <Loading />;
   }
+  const getDateTime = (time: string) => {
+    const date = new Date(time);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
 
   if (!gig) {
     return (
@@ -567,7 +573,6 @@ const ViewGigPage = ({ id }: { id: string }) => {
                       Order Now ({formatBDT(gig.price)})
                     </button>
                   )}
-  
                 </div>
 
                 <div className="mt-4 text-center">
@@ -642,7 +647,7 @@ const ViewGigPage = ({ id }: { id: string }) => {
                     Last delivery
                   </span>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {gig.freelancer.lastDelivery}
+                    {getDateTime(gig.freelancer.lastDelivery)}
                   </p>
                 </div>
               </div>
@@ -659,7 +664,6 @@ const ViewGigPage = ({ id }: { id: string }) => {
           </div>
         </div>
       </main>
-
 
       {/* Mobile Bottom Action Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 z-50">
