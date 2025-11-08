@@ -102,6 +102,10 @@ export async function PATCH(request: Request) {
     freelancer.balance += order.totalAmount;
     freelancer.completedOrders += 1;
     freelancer.lastDelivery = new Date().toISOString();
+      if (freelancer.pendingOrders) {
+      freelancer.pendingOrders -= 1;
+  
+    }
 
     // Execute all updates in parallel
     await Promise.all([
@@ -110,6 +114,8 @@ export async function PATCH(request: Request) {
       freelancer.save(),
       ...rejectPromises
     ]);
+
+  
 
     // Return the updated delivery
     return new Response(JSON.stringify(delivery.toObject()), {

@@ -5,6 +5,8 @@ import { getUser } from "@/lib/getUser";
 import User from "@/models/User";
 import MessageModel from "@/models/Message";
 import OrderModel from "@/models/Order";
+import { calculateAverageReplyDelay } from "@/lib/calculateReplyDelay";
+
 
 // GET /api/user?id=USER_ID
 export async function GET(req: Request) {
@@ -27,6 +29,11 @@ export async function GET(req: Request) {
         $or: [{ user: user._id }, { freelancer: user._id }],
         status: "paid",
       });
+
+      const { overallAverageReadable } = await calculateAverageReplyDelay(user._id);
+      if (overallAverageReadable !== '0 seconds') {
+        user.responseTime = overallAverageReadable;
+      }
       return NextResponse.json({ user, unreadedMessagesCount, ordersCount });
     }
 

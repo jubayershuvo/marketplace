@@ -1015,7 +1015,7 @@ const Messages: React.FC = () => {
 
       {/* Chat Area */}
       <div
-        className={`flex-1 flex flex-col h-10/12 md:h-11/12 ${
+        className={`flex-1 flex flex-col md:h-11/12 ${
           isMobileView && sidebarOpen ? "hidden" : ""
         }`}
       >
@@ -1180,7 +1180,7 @@ const Messages: React.FC = () => {
                       disabled={sending}
                       rows={1}
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed resize-none text-sm dark:text-white transition-all duration-200"
-                      style={{ minHeight: "44px", maxHeight: "120px" }}
+                      style={{ minHeight: "44px", maxHeight: "120px", overflow: "hidden" }}
                     />
                   </div>
                   <button

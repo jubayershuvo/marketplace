@@ -89,6 +89,10 @@ export async function POST(req: NextRequest) {
       href: `/gig/${gig._id}`,
     });
 
+
+
+
+
     return NextResponse.json({
       success: true,
       message: "Gig created successfully",

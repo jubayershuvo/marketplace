@@ -97,6 +97,12 @@ export async function POST(req: NextRequest) {
       message: `Order confirmed for "${gig.title}".`,
       href: `/orders`,
     });
+    if (user.pendingOrders === undefined || user.pendingOrders <= 0) {
+      user.pendingOrders = 1;
+    } else {
+      user.pendingOrders += 1;
+    }
+    await user.save();
     return NextResponse.json({ order, payment, transaction });
   } catch (error) {
     console.log(error);

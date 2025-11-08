@@ -109,6 +109,7 @@ const UserSchema = new Schema<IUser>(
     earnings: { type: Number, default: 0 },
     reviews: [{ type: Schema.Types.ObjectId, ref: "Review" }],
     reviewsCount: { type: Number, default: 0 },
+    pendingOrders: { type: Number, default: 0 },
 
     // ---------- Client ----------
     companyName: { type: String, trim: true },

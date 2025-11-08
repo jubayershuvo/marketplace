@@ -106,7 +106,7 @@ export default function LoginPage() {
   };
 
   const handleForgotPassword = () => {
-    alert("Forgot password functionality would be implemented here");
+    router.push("/forget-password");
   };
 
   useEffect(() => {
