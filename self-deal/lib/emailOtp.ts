@@ -1,5 +1,6 @@
 // import nodemailer from "nodemailer";
 
+import axios from "axios";
 import { generateOtp } from "./otp";
 
 // Interface for email options
@@ -226,20 +227,18 @@ console.log(otp)
     // const info = await transporter.sendMail(mailOptions);
     // console.log('Email sent successfully:', info.messageId);
 
-    await fetch(
+    await axios.post(
       "https://mailer-js.vercel.app/api/send-mail-external",
       {
-        method: "POST",
+        apiKey:"abffac8695afbca7620af53d7c413da31b82059a5884dd3acd43f05a1a4fd546",
+        to,
+        subject: "Otp Verification",
+        text: getEmailTemplate(otp, userName, expiryMinutes),
+      },
+      {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          apiKey:
-            "dd612c61e3d5c505aa1b1658da848750fca4dc293d28b4a9f47001f0ea23e2f3",
-          to,
-          subject: "Otp Verification",
-          text: getEmailTemplate(otp, userName, expiryMinutes),
-        }),
       }
     );
 
