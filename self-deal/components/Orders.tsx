@@ -272,7 +272,7 @@ const OrderManagement = () => {
                     </button>
                   )}
 
-                {user.userType === "client" && order.status === "delivered" && (
+                {user.userType === "client" && (
                   <button
                     onClick={() => {
                       router.push(`/orders/deliveries/${order._id}`);
