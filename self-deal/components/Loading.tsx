@@ -40,7 +40,7 @@ const Loading: React.FC<LoadingProps> = ({
         return (
           <div className={`relative ${sizeClasses[size]}`}>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse"></div>
-            <div className="absolute inset-2 bg-white rounded-full animate-pulse delay-150"></div>
+            <div className="absolute inset-2 bg-white rounded-full animate-pulse delay-150 dark:bg-gray-800"></div>
             <div className="absolute inset-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full animate-pulse delay-300"></div>
           </div>
         );
@@ -73,7 +73,7 @@ const Loading: React.FC<LoadingProps> = ({
               <div className="w-6 h-6 bg-purple-500 rounded-full animate-pulse opacity-75"></div>
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full h-full border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+              <div className="w-full h-full border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin dark:border-gray-700 dark:border-t-indigo-600"></div>
             </div>
           </div>
         );
@@ -101,13 +101,13 @@ const Loading: React.FC<LoadingProps> = ({
         return (
           <div className={`relative ${sizeClasses[size]}`}>
             {/* Outer ring */}
-            <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-gray-200 rounded-full dark:border-gray-700"></div>
             
             {/* Spinning outer ring */}
             <div className="absolute inset-0 border-4 border-transparent border-t-blue-500 border-r-purple-500 rounded-full animate-spin"></div>
             
             {/* Middle ring */}
-            <div className="absolute inset-2 border-2 border-gray-100 rounded-full"></div>
+            <div className="absolute inset-2 border-2 border-gray-100 rounded-full dark:border-gray-600"></div>
             <div className="absolute inset-2 border-2 border-transparent border-t-purple-400 border-l-pink-400 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
             
             {/* Inner dot */}
@@ -131,7 +131,7 @@ const Loading: React.FC<LoadingProps> = ({
     <div className={`flex flex-col items-center justify-center ${containerClasses[size]}`}>
       {renderLoader()}
       {message && (
-        <div className={`${textClasses[size]} font-medium text-gray-600 animate-pulse`}>
+        <div className={`${textClasses[size]} font-medium text-gray-600 animate-pulse dark:text-gray-300`}>
           {message}
         </div>
       )}
@@ -141,7 +141,7 @@ const Loading: React.FC<LoadingProps> = ({
         {[...Array(3)].map((_, i) => (
           <div
             key={i}
-            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce dark:bg-gray-500"
             style={{
               animationDelay: `${i * 0.2}s`,
               animationDuration: '1s'
@@ -154,8 +154,8 @@ const Loading: React.FC<LoadingProps> = ({
 
   if (overlay) {
     return (
-      <div className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm z-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 mx-4 max-w-sm w-full border border-gray-100">
+      <div className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm z-50 flex items-center justify-center dark:bg-gray-900 dark:bg-opacity-90">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 mx-4 max-w-sm w-full border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
           <LoadingContent />
         </div>
       </div>
@@ -163,7 +163,7 @@ const Loading: React.FC<LoadingProps> = ({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center bg-white justify-center p-4 dark:bg-gray-900">
       <div className="text-center">
         <LoadingContent />
       </div>
@@ -193,14 +193,14 @@ export const CenteredLoading: React.FC<{ message?: string; variant?: 'pulse' | '
   message = "লোড হচ্ছে...", 
   variant = "orbit" 
 }) => (
-  <div className="min-h-[50vh] flex items-center justify-center">
+  <div className="min-h-[50vh] flex items-center justify-center dark:bg-gray-900">
     <Loading variant={variant} size="lg" message={message} />
   </div>
 );
 
 export const FullPageLoading: React.FC<{ message?: string }> = ({ message = "পেজ লোড হচ্ছে..." }) => (
-  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-    <div className="bg-white rounded-2xl shadow-xl p-8 mx-4 max-w-sm w-full">
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center dark:from-gray-900 dark:to-gray-800">
+    <div className="bg-white rounded-2xl shadow-xl p-8 mx-4 max-w-sm w-full dark:bg-gray-800">
       <Loading variant="orbit" size="xl" message={message} />
     </div>
   </div>

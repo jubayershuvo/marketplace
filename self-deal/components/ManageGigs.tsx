@@ -64,13 +64,11 @@ interface GigWithAnalytics extends IGig {
   avgRating: number;
 }
 
-
 const MyGigManager = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   
-
   const [gigs, setGigs] = useState<GigWithAnalytics[]>([]);
   const [loading, setLoading] = useState(false);
   const {user} = useAppSelector((state) => state.userAuth);
@@ -96,6 +94,7 @@ const MyGigManager = () => {
 
     fetchGigs();
   }, [user, router]);
+  
   if (loading) {
     return <Loading />;
   }
@@ -129,7 +128,6 @@ const MyGigManager = () => {
     return matchesSearch && matchesFilter;
   });
 
-
   const handleViewGig = (id: string) => {
     window.location.href = `/gig/${id}`;
   };
@@ -155,10 +153,10 @@ const MyGigManager = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   Total Earnings
                 </div>
-                <div className="font-semibold text-green-600">
+                <div className="font-semibold text-green-600 dark:text-green-400">
                   ${analytics.totalRevenue.toLocaleString()}
                 </div>
               </div>
@@ -188,7 +186,7 @@ const MyGigManager = () => {
                 className={`flex items-center gap-2 px-3 py-2 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? "border-green-500 text-green-600 dark:text-green-400"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    : "border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300"
                 }`}
               >
                 <tab.icon className="w-4 h-4" />
@@ -210,11 +208,11 @@ const MyGigManager = () => {
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       ${analytics.totalRevenue.toLocaleString()}
                     </p>
-                    <p className="text-xs text-green-600 mt-1">
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
                       +12% from last month
                     </p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-green-600" />
+                  <DollarSign className="w-8 h-8 text-green-600 dark:text-green-400" />
                 </div>
               </div>
 
@@ -227,11 +225,11 @@ const MyGigManager = () => {
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {analytics.totalOrders}
                     </p>
-                    <p className="text-xs text-blue-600 mt-1">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                       +8% from last month
                     </p>
                   </div>
-                  <Package className="w-8 h-8 text-blue-600" />
+                  <Package className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
 
@@ -244,11 +242,11 @@ const MyGigManager = () => {
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {analytics.avgRating}
                     </p>
-                    <p className="text-xs text-yellow-600 mt-1">
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
                       Excellent rating
                     </p>
                   </div>
-                  <Star className="w-8 h-8 text-yellow-500" />
+                  <Star className="w-8 h-8 text-yellow-500 dark:text-yellow-400" />
                 </div>
               </div>
 
@@ -261,11 +259,11 @@ const MyGigManager = () => {
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">
                       {analytics.activeGigs}
                     </p>
-                    <p className="text-xs text-purple-600 mt-1">
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
                       All gigs active
                     </p>
                   </div>
-                  <Activity className="w-8 h-8 text-purple-600" />
+                  <Activity className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
             </div>
@@ -278,7 +276,7 @@ const MyGigManager = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Conversion Rate
                     </p>
-                    <p className="text-xl font-bold dark:text-white">
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
                       {analytics.conversionRate}%
                     </p>
                   </div>
@@ -292,7 +290,7 @@ const MyGigManager = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Avg Order Value
                     </p>
-                    <p className="text-xl font-bold dark:text-white">
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
                       ${analytics.avgOrderValue}
                     </p>
                   </div>
@@ -306,7 +304,7 @@ const MyGigManager = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Total Views
                     </p>
-                    <p className="text-xl font-bold dark:text-white">
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
                       {analytics.totalImpressions.toLocaleString()}
                     </p>
                   </div>
@@ -316,7 +314,7 @@ const MyGigManager = () => {
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold dark:text-white">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Top Performing Gigs
                 </h3>
               </div>
@@ -336,12 +334,12 @@ const MyGigManager = () => {
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div className="flex-1">
-                          <p className="font-medium text-sm line-clamp-1 dark:text-white">
+                          <p className="font-medium text-sm line-clamp-1 text-gray-900 dark:text-white">
                             {gig.title}
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                            <span className="text-xs dark:text-white">
+                            <span className="text-xs text-gray-700 dark:text-white">
                               {gig.avgRating}
                             </span>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -350,7 +348,7 @@ const MyGigManager = () => {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-green-600">
+                          <p className="font-semibold text-green-600 dark:text-green-400">
                             ${gig.revenue.toLocaleString()}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -375,13 +373,13 @@ const MyGigManager = () => {
                   placeholder="Search gigs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900"
                 />
               </div>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900"
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -389,7 +387,7 @@ const MyGigManager = () => {
                   </option>
                 ))}
               </select>
-              <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+              <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center">
                 {filteredGigs.length} gig{filteredGigs.length !== 1 ? "s" : ""}
               </div>
             </div>
@@ -400,7 +398,7 @@ const MyGigManager = () => {
                   key={gig._id}
                   className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <div className="aspect-video bg-gray-200 relative">
+                  <div className="aspect-video bg-gray-200 dark:bg-gray-700 relative">
                     <img
                       src={gig.images[0]}
                       alt={gig.title}
@@ -424,7 +422,7 @@ const MyGigManager = () => {
                     <div className="flex items-center gap-4 mb-3 text-sm">
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                        <span className="font-medium dark:text-white">
+                        <span className="font-medium text-gray-900 dark:text-white">
                           {gig.avgRating}
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">
@@ -460,13 +458,13 @@ const MyGigManager = () => {
                         {gig.tags.slice(0, 3).map((tag, index) => (
                           <span
                             key={index}
-                            className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs"
+                            className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs"
                           >
                             {tag}
                           </span>
                         ))}
                         {gig.tags.length > 3 && (
-                          <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs">
+                          <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded text-xs">
                             +{gig.tags.length - 3}
                           </span>
                         )}
@@ -493,7 +491,7 @@ const MyGigManager = () => {
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                   No gigs found
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Try adjusting your search or filters
                 </p>
                 <button
@@ -515,7 +513,7 @@ const MyGigManager = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Impressions
                   </h3>
                   <Eye className="w-6 h-6 text-blue-500" />
@@ -523,7 +521,7 @@ const MyGigManager = () => {
                 <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                   {analytics.totalImpressions.toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Total views this month
                 </p>
                 <div className="mt-3 flex items-center text-sm">
@@ -536,7 +534,7 @@ const MyGigManager = () => {
 
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Clicks
                   </h3>
                   <Target className="w-6 h-6 text-green-500" />
@@ -544,7 +542,7 @@ const MyGigManager = () => {
                 <p className="text-3xl font-bold text-green-600 dark:text-green-400">
                   {analytics.totalClicks.toLocaleString()}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Gig clicks this month
                 </p>
                 <div className="mt-3 flex items-center text-sm">
@@ -557,7 +555,7 @@ const MyGigManager = () => {
 
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Conversion Rate
                   </h3>
                   <Zap className="w-6 h-6 text-purple-500" />
@@ -565,7 +563,7 @@ const MyGigManager = () => {
                 <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
                   {analytics.conversionRate}%
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Click to order rate
                 </p>
                 <div className="mt-3 flex items-center text-sm">
@@ -579,7 +577,7 @@ const MyGigManager = () => {
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
               <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold dark:text-white">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Gig Performance Analytics
                 </h3>
               </div>
@@ -587,13 +585,25 @@ const MyGigManager = () => {
                 <table className="w-full">
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Gig
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Impressions
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Clicks
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        CTR
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Orders
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Revenue
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Rating
                       </th>
                     </tr>
@@ -620,7 +630,7 @@ const MyGigManager = () => {
                                 <div className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
                                   {gig.title}
                                 </div>
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
                                   {gig.category}
                                 </div>
                               </div>
@@ -638,13 +648,13 @@ const MyGigManager = () => {
                           <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                             {gig.orders}
                           </td>
-                          <td className="px-6 py-4 text-sm font-semibold text-green-600">
+                          <td className="px-6 py-4 text-sm font-semibold text-green-600 dark:text-green-400">
                             ${gig.revenue.toLocaleString()}
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-1">
                               <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                              <span className="text-sm font-medium dark:text-white">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
                                 {gig.avgRating}
                               </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -662,7 +672,7 @@ const MyGigManager = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-semibold mb-4 dark:text-white">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
                   Category Performance
                 </h3>
                 <div className="space-y-4">
@@ -686,10 +696,10 @@ const MyGigManager = () => {
                           className="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-0"
                         >
                           <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium dark:text-white">
+                            <span className="font-medium text-gray-900 dark:text-white">
                               {category}
                             </span>
-                            <span className="text-green-600 font-semibold">
+                            <span className="text-green-600 dark:text-green-400 font-semibold">
                               ${categoryRevenue.toLocaleString()}
                             </span>
                           </div>
@@ -708,14 +718,14 @@ const MyGigManager = () => {
               </div>
 
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-semibold mb-4 dark:text-white">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
                   Recent Activity
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                     <Eye className="w-5 h-5 text-blue-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium dark:text-white">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         High impression rate
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -728,7 +738,7 @@ const MyGigManager = () => {
                   <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                     <TrendingUp className="w-5 h-5 text-green-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium dark:text-white">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         Conversion improving
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -740,7 +750,7 @@ const MyGigManager = () => {
                   <div className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                     <Star className="w-5 h-5 text-yellow-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium dark:text-white">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         Great ratings
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -752,7 +762,7 @@ const MyGigManager = () => {
                   <div className="flex items-start gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                     <Award className="w-5 h-5 text-purple-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium dark:text-white">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         Top performer
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">

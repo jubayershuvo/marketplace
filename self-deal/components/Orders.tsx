@@ -172,7 +172,7 @@ const OrderManagement = () => {
       user.userType === "freelancer" ? client : order.freelancer;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0  bg-opacity-25 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">

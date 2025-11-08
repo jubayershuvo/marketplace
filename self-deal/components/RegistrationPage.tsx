@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import axios from "axios";
-import { useAppDispatch } from "@/lib/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { userLogin } from "@/lib/userSlice";
 import countries from "i18n-iso-countries";
 // Register language (English in this case)
@@ -75,6 +74,7 @@ export default function RegisterPage() {
     userType: "client",
   });
   const router = useRouter();
+    const { isLoggedIn, user } = useAppSelector((state) => state.userAuth);
 
   // Password strength checker
   const getPasswordStrength = (password: string): number => {
@@ -117,7 +117,11 @@ export default function RegisterPage() {
   }, []);
 
   const passwordStrength = getPasswordStrength(formData.password);
-
+  useEffect(() => {
+    if (user && user.userType !== "guest" || isLoggedIn) {
+      router.push("/");
+    }
+  }, [user, router]);
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 

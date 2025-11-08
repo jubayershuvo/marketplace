@@ -655,7 +655,7 @@ const ViewGigPage = ({ id }: { id: string }) => {
               <div className="space-y-3">
                 <Link
                   href={`/profile/${gig.freelancer._id}`}
-                  className="block w-full py-2 text-center border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium rounded-lg transition-colors"
+                  className="block cursor-pointer w-full py-2 text-center border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium rounded-lg transition-colors"
                 >
                   View Profile
                 </Link>

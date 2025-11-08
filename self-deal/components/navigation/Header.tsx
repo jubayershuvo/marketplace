@@ -25,7 +25,6 @@ import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { updateUser, userLogout } from "@/lib/userSlice";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { set } from "mongoose";
 
 // TypeScript Interfaces
 interface NavItem {
@@ -627,7 +626,7 @@ const FiverrHeader: React.FC = () => {
                   />
                   <button
                     onClick={handleSearch}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-md transition-colors"
+                    className="absolute cursor-pointer right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-md transition-colors"
                     type="button"
                     aria-label="Search"
                   >
@@ -837,7 +836,7 @@ const FiverrHeader: React.FC = () => {
               />
               <button
                 onClick={handleSearch}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-md"
+                className="absolute cursor-pointer right-2 top-1/2 transform -translate-y-1/2 bg-green-500 hover:bg-green-600 text-white p-2 rounded-md"
                 type="button"
                 aria-label="Search"
               >

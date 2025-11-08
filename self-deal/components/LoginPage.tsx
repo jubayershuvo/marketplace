@@ -108,12 +108,11 @@ export default function LoginPage() {
   const handleForgotPassword = () => {
     router.push("/forget-password");
   };
-
   useEffect(() => {
-    if (isLoggedIn) {
+    if (user && user.userType !== "guest" || isLoggedIn) {
       router.push("/");
     }
-  }, [isLoggedIn, router]);
+  }, [user, router]);
 
   return (
     <div className="min-h-screen transition-colors duration-300">

@@ -4,19 +4,6 @@ import { Search } from "lucide-react";
 import { User } from "@/types/Profile";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-// JSON Data
-const categories = [
-  "Web Development",
-  "Graphic Design",
-  "Digital Marketing",
-  "Video Editing",
-  "Content Writing",
-  "Mobile Apps",
-  "SEO",
-  "UI/UX Design",
-];
-
 const testimonials = [
   {
     id: 1,
@@ -69,6 +56,7 @@ export default function HomePage({
             />
             <button
               onClick={() => {
+                if (!q) return;
                 router.push(`/search?q=${q}`);
               }}
               className="px-5 py-3 cursor-pointer bg-green-600 text-white flex items-center gap-2 hover:bg-green-700"
@@ -110,7 +98,7 @@ export default function HomePage({
                   <img
                     src={f.avatar}
                     alt={f.firstName + " " + f.lastName}
-                    className="w-16 h-16 rounded-full"
+                    className="w-16 h-16 rounded-full object-cover"
                   />
                   <div>
                     <h4 className="font-bold">
@@ -181,9 +169,6 @@ export default function HomePage({
           <p className="text-gray-600 dark:text-gray-400 mb-6">
             Join thousands of businesses hiring top talent today.
           </p>
-          <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
-            Get Started
-          </button>
         </section>
       </div>
     </div>
