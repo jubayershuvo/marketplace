@@ -31,15 +31,15 @@ export async function GET(req: NextRequest) {
 
     const totalWithdrawn = withdraws
       .filter((withdraw) => withdraw.status === "completed")
-      .reduce((sum, withdraw) => sum + withdraw.amount, 0);
+      .reduce((sum, withdraw) => sum + withdraw.amount, 0) || 0;
 
     const pendingBalance = orders
       .filter((order) => order.status === "paid")
-      .reduce((sum, order) => sum + order.amount, 0);
+      .reduce((sum, order) => sum + order.amount, 0) || 0;
 
     const totalEarned = orders
       .filter((order) => order.status === "completed")
-      .reduce((sum, order) => sum + order.totalAmount, 0);
+      .reduce((sum, order) => sum + order.totalAmount, 0) || 0;
 
     return NextResponse.json({
       balance: user.balance,
