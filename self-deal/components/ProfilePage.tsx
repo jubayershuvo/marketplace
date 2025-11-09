@@ -198,7 +198,7 @@ export default function Profile({ id }: { id?: string }) {
   const handleSave = async () => {
     try {
       setSaving(true);
-      
+
       // Prepare data with only allowed editable fields
       const updateData: Partial<User> = {
         _id: editForm._id,
@@ -287,7 +287,7 @@ export default function Profile({ id }: { id?: string }) {
     try {
       const formData = new FormData();
       formData.append("avatar", file);
-      
+
       const response = await axios.post("/api/upload-avatar", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -296,9 +296,9 @@ export default function Profile({ id }: { id?: string }) {
       });
 
       if (response.data.success) {
-        setEditForm(prev => ({
+        setEditForm((prev) => ({
           ...prev,
-          avatar: response.data.avatarUrl
+          avatar: response.data.avatarUrl,
         }));
         console.log("Avatar updated successfully");
       }
@@ -316,13 +316,13 @@ export default function Profile({ id }: { id?: string }) {
 
     return (
       <div>
-        <label className="block text-sm font-medium mb-1">Professional Title</label>
+        <label className="block text-sm font-medium mb-1">
+          Professional Title
+        </label>
         <input
           type="text"
           value={editForm.displayName || ""}
-          onChange={(e) =>
-            handleInputChange("displayName", e.target.value)
-          }
+          onChange={(e) => handleInputChange("displayName", e.target.value)}
           className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
           placeholder="e.g., Senior Web Developer"
         />
@@ -340,9 +340,7 @@ export default function Profile({ id }: { id?: string }) {
         <input
           type="text"
           value={editForm.companyName || ""}
-          onChange={(e) =>
-            handleInputChange("companyName", e.target.value)
-          }
+          onChange={(e) => handleInputChange("companyName", e.target.value)}
           className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
           placeholder="Enter your company name"
         />
@@ -456,7 +454,10 @@ export default function Profile({ id }: { id?: string }) {
           <div className="space-y-3">
             <div className="space-y-2">
               {editForm.education?.map((edu, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                >
                   <span>{edu}</span>
                   <button
                     onClick={() => handleArrayRemove("education", index)}
@@ -500,7 +501,10 @@ export default function Profile({ id }: { id?: string }) {
           <div className="space-y-3">
             <div className="space-y-2">
               {editForm.certifications?.map((cert, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                >
                   <span>{cert}</span>
                   <button
                     onClick={() => handleArrayRemove("certifications", index)}
@@ -541,12 +545,37 @@ export default function Profile({ id }: { id?: string }) {
     );
   };
 
+  const getLastSeen = (lastSeen: string) => {
+    const date = new Date(lastSeen);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+
+    const diffInSeconds = Math.floor(diffInMs / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+
+    if (diffInSeconds < 60) return "Active";
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInHours < 24) return `${diffInHours}h`;
+    if (diffInDays < 7) return `${diffInDays}d`;
+    if (diffInWeeks < 4) return `${diffInWeeks}w`;
+    if (diffInMonths < 12) return `${diffInMonths}mo`;
+    return `${diffInYears}y`;
+  };
+
   return (
     <div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
       {/* Profile Header */}
       <section className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
           <div className="relative">
+            <div className="absolute top-0 right-0 bg-green-600 text-white px-2 py-1 rounded">
+              {getLastSeen(editForm.lastSeen || "")}
+            </div>
             <img
               src={editForm.avatar || "/api/placeholder/128/128"}
               alt={`${editForm.firstName} ${editForm.lastName}`}
@@ -555,9 +584,9 @@ export default function Profile({ id }: { id?: string }) {
             {isEditing && (
               <button
                 onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'image/*';
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
                   input.onchange = (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0];
                     if (file) {
@@ -577,21 +606,29 @@ export default function Profile({ id }: { id?: string }) {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">First Name</label>
+                    <label className="block text-sm font-medium mb-1">
+                      First Name
+                    </label>
                     <input
                       type="text"
                       value={editForm.firstName}
-                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
                       placeholder="First Name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Last Name</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Last Name
+                    </label>
                     <input
                       type="text"
                       value={editForm.lastName}
-                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("lastName", e.target.value)
+                      }
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
                       placeholder="Last Name"
                     />
@@ -603,11 +640,15 @@ export default function Profile({ id }: { id?: string }) {
                 {isClient(editForm) && renderClientEditingFields()}
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Location</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Location
+                  </label>
                   <input
                     type="text"
                     value={editForm.location}
-                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("location", e.target.value)
+                    }
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
                     placeholder="Location"
                   />
@@ -615,10 +656,14 @@ export default function Profile({ id }: { id?: string }) {
 
                 {/* Description Field */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Description
+                  </label>
                   <textarea
                     value={editForm.description || ""}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("description", e.target.value)
+                    }
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 min-h-[100px] resize-vertical"
                     placeholder="Tell us about yourself..."
                     rows={4}
@@ -657,10 +702,13 @@ export default function Profile({ id }: { id?: string }) {
 
                 {isFreelancer(user) && (
                   <div className="flex items-center justify-center md:justify-start gap-2 mt-2">
-                    <Star className="text-yellow-500 fill-yellow-500" size={18} />
+                    <Star
+                      className="text-yellow-500 fill-yellow-500"
+                      size={18}
+                    />
                     <span>
-                      {user.rating?.toFixed(1) || "0.0"} ({user.reviewsCount || 0}{" "}
-                      reviews)
+                      {user.rating?.toFixed(1) || "0.0"} (
+                      {user.reviewsCount || 0} reviews)
                     </span>
                   </div>
                 )}
@@ -668,7 +716,7 @@ export default function Profile({ id }: { id?: string }) {
                 <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400">
                   <MapPin size={16} /> {user.location}
                 </div>
-                
+
                 {isClient(user) && user.companyName && (
                   <div className="flex items-center justify-center md:justify-start gap-2 mt-2 text-gray-600 dark:text-gray-400">
                     <span>Company: {user.companyName}</span>
@@ -856,7 +904,10 @@ export default function Profile({ id }: { id?: string }) {
           <h3 className="text-xl font-bold mb-3">Education</h3>
           <div className="space-y-3">
             {user.education.map((edu, i) => (
-              <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div
+                key={i}
+                className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+              >
                 {edu}
               </div>
             ))}
@@ -865,18 +916,23 @@ export default function Profile({ id }: { id?: string }) {
       )}
 
       {/* Certifications - Only for Freelancers */}
-      {isFreelancer(user) && user.certifications && user.certifications.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
-          <h3 className="text-xl font-bold mb-3">Certifications</h3>
-          <div className="space-y-3">
-            {user.certifications.map((cert, i) => (
-              <div key={i} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                {cert}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {isFreelancer(user) &&
+        user.certifications &&
+        user.certifications.length > 0 && (
+          <section className="max-w-6xl mx-auto px-4 py-6 border-t dark:border-gray-800">
+            <h3 className="text-xl font-bold mb-3">Certifications</h3>
+            <div className="space-y-3">
+              {user.certifications.map((cert, i) => (
+                <div
+                  key={i}
+                  className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                >
+                  {cert}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
     </div>
   );
 }

@@ -401,29 +401,6 @@ const FreelancerWallet = ({
     }
   };
 
-  // Handle export - export all transactions, not filtered ones
-  const handleExport = async (format: "csv" | "pdf" = "csv") => {
-    try {
-      setLoading(true);
-      const blob = await walletAPI.exportTransactions(format);
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = `transactions.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
-      console.error("Error exporting transactions:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle filter changes - no API calls, just state updates
   const handleFilterChange = (newFilterType: string) => {
@@ -703,14 +680,7 @@ const FreelancerWallet = ({
                           <option value="credit">Credits Only</option>
                           <option value="debit">Debits Only</option>
                         </select>
-                        <button
-                          onClick={() => handleExport("csv")}
-                          disabled={loading}
-                          className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                        >
-                          <Download className="w-4 h-4" />
-                          Export
-                        </button>
+      
                       </div>
                     </div>
 

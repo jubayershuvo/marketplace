@@ -9,7 +9,6 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
-    console.log(user.userType)
     if (user.userType !== "freelancer") {
       return NextResponse.json(
         { error: "Forbidden: Only freelancers can access wallet" },
