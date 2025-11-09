@@ -57,11 +57,6 @@ interface WithdrawalRequest {
 }
 
 // Constants
-const WITHDRAWAL_CONSTANTS = {
-  MIN_WITHDRAWAL_AMOUNT: 500,
-  WITHDRAWAL_FEE_PERCENTAGE: 5, // 5% fee
-  MIN_WITHDRAWAL_FEE: 10, // Minimum fee amount
-};
 
 // API Service Functions
 const walletAPI = {
@@ -106,7 +101,8 @@ const walletAPI = {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.message || "Withdrawal failed";
+        const errorMessage =
+          error.response?.data?.message || "Withdrawal failed";
         throw new Error(errorMessage);
       }
       throw new Error("Withdrawal failed");
@@ -133,7 +129,15 @@ const walletAPI = {
   },
 };
 
-const FreelancerWallet = () => {
+const FreelancerWallet = ({
+  WITHDRAWAL_CONSTANTS,
+}: {
+  WITHDRAWAL_CONSTANTS: {
+    MIN_WITHDRAWAL_AMOUNT: number;
+    WITHDRAWAL_FEE_PERCENTAGE: number;
+    MIN_WITHDRAWAL_FEE: number;
+  };
+}) => {
   const router = useRouter();
   const { user } = useAppSelector((state) => state.userAuth);
 
@@ -167,17 +171,20 @@ const FreelancerWallet = () => {
 
     // Filter by type
     if (filterType !== "all") {
-      filtered = filtered.filter(transaction => transaction.type === filterType);
+      filtered = filtered.filter(
+        (transaction) => transaction.type === filterType
+      );
     }
 
     // Filter by search term
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(transaction =>
-        transaction.description.toLowerCase().includes(searchLower) ||
-        transaction.amount.toString().includes(searchTerm) ||
-        transaction.status.toLowerCase().includes(searchLower) ||
-        transaction.method.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (transaction) =>
+          transaction.description.toLowerCase().includes(searchLower) ||
+          transaction.amount.toString().includes(searchTerm) ||
+          transaction.status.toLowerCase().includes(searchLower) ||
+          transaction.method.toLowerCase().includes(searchLower)
       );
     }
 
@@ -187,9 +194,9 @@ const FreelancerWallet = () => {
   // Calculate withdrawal fee
   const calculateWithdrawalFee = (amount: number): number => {
     const fee = Math.ceil(
-      amount / WITHDRAWAL_CONSTANTS.WITHDRAWAL_FEE_PERCENTAGE
+      (amount * (WITHDRAWAL_CONSTANTS.WITHDRAWAL_FEE_PERCENTAGE / 100))
     );
-    return fee
+    return fee;
   };
 
   // Calculate total withdrawal amount (requested amount + fee)
@@ -260,8 +267,7 @@ const FreelancerWallet = () => {
   };
 
   // Format currency
-  const formatBDT = (amount: number) =>
-    `৳${amount?.toLocaleString("en-BD")}`;
+  const formatBDT = (amount: number) => `৳${amount?.toLocaleString("en-BD")}`;
 
   // Format date
   const formatDate = (dateString: string) => {
@@ -350,7 +356,9 @@ const FreelancerWallet = () => {
     ) {
       const phoneRegex = /^(?:\+?88)?01[3-9]\d{8}$/;
       if (!phoneRegex.test(accountDetails.replace(/\s/g, ""))) {
-        setWithdrawError("Please enter a valid Bangladesh phone number (01XXXXXXXXX)");
+        setWithdrawError(
+          "Please enter a valid Bangladesh phone number (01XXXXXXXXX)"
+        );
         return;
       }
     }
@@ -365,7 +373,7 @@ const FreelancerWallet = () => {
         number: accountDetails,
       };
 
-       await walletAPI.createWithdrawal(withdrawalRequest);
+      await walletAPI.createWithdrawal(withdrawalRequest);
 
       // Refresh all data to get the latest from server
       await refreshData();
@@ -375,17 +383,17 @@ const FreelancerWallet = () => {
       setWithdrawAmount("");
       setAccountDetails("");
       setWithdrawError(null);
-      
+
       // Show success message
       setError("Withdrawal request submitted successfully!");
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setError(null);
       }, 3000);
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Withdrawal failed";
+      const errorMessage =
+        err instanceof Error ? err.message : "Withdrawal failed";
       setWithdrawError(errorMessage);
       console.error("Error processing withdrawal:", err);
     } finally {
@@ -444,16 +452,20 @@ const FreelancerWallet = () => {
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Error Message */}
         {error && (
-          <div className={`p-4 rounded-lg ${
-            error.includes("success") 
-              ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" 
-              : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-          }`}>
-            <div className={`flex items-center gap-2 ${
-              error.includes("success") 
-                ? "text-green-700 dark:text-green-400" 
-                : "text-red-700 dark:text-red-400"
-            }`}>
+          <div
+            className={`p-4 rounded-lg ${
+              error.includes("success")
+                ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+            }`}
+          >
+            <div
+              className={`flex items-center gap-2 ${
+                error.includes("success")
+                  ? "text-green-700 dark:text-green-400"
+                  : "text-red-700 dark:text-red-400"
+              }`}
+            >
               {error.includes("success") ? (
                 <CheckCircle className="w-4 h-4" />
               ) : (
@@ -463,8 +475,8 @@ const FreelancerWallet = () => {
               <button
                 onClick={() => setError(null)}
                 className={`ml-auto ${
-                  error.includes("success") 
-                    ? "text-green-500 hover:text-green-700" 
+                  error.includes("success")
+                    ? "text-green-500 hover:text-green-700"
                     : "text-red-500 hover:text-red-700"
                 }`}
               >
@@ -751,10 +763,9 @@ const FreelancerWallet = () => {
                           No transactions found
                         </p>
                         <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                          {allTransactions.length === 0 
+                          {allTransactions.length === 0
                             ? "You don't have any transactions yet"
-                            : "Try adjusting your search or filter criteria"
-                          }
+                            : "Try adjusting your search or filter criteria"}
                         </p>
                       </div>
                     )}

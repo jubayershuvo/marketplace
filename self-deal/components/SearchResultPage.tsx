@@ -122,8 +122,8 @@ export default function SearchResultPage({ query }: { query: string }) {
                   <button
                     onClick={async () => {
                       try {
-                        await axios.get(`/api/gig-click?id=${g._id}`);
                         router.push(`/gig/${g._id}`);
+                        await axios.get(`/api/gig-click?id=${g._id}`);
                       } catch (err) {
                         console.error(err);
                       }

@@ -13,9 +13,16 @@ import Loading from "./Loading";
 
 interface PaymentPageProps {
   id: string;
+  paymentNumbers: { nagad: string; bkash: string };
 }
 
-const PaymentPage: React.FC<PaymentPageProps> = ({id}:{id:string}) => {
+const PaymentPage: React.FC<PaymentPageProps> = ({
+  id,
+  paymentNumbers,
+}: {
+  id: string;
+  paymentNumbers: { nagad: string; bkash: string };
+}) => {
   const [selectedMethod, setSelectedMethod] = useState<"nagad" | "bkash" | "">(
     ""
   );
@@ -29,11 +36,17 @@ const PaymentPage: React.FC<PaymentPageProps> = ({id}:{id:string}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  // Filter available payment methods
+  const availableMethods = Object.entries(paymentNumbers)
+    .filter(([_, number]) => number && number.trim() !== "")
+    .map(([method]) => method as "nagad" | "bkash");
+
   useEffect(() => {
     if (!id) {
       router.push("/");
     }
   }, []);
+  
   useEffect(() => {
     async function getGigInfo() {
       if (id) {
@@ -56,11 +69,26 @@ const PaymentPage: React.FC<PaymentPageProps> = ({id}:{id:string}) => {
     return <Loading />;
   }
 
-  // Payment numbers with proper typing
-  const paymentNumbers: Record<"nagad" | "bkash", string> = {
-    nagad: "01712345678",
-    bkash: "01987654321",
-  };
+  // If no payment methods are available
+  if (availableMethods.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 py-8 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="text-center mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center shadow-lg">
+              <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+              পেমেন্ট মেথড নেই
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300">
+              Currently no payment methods are available. Please contact support.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const copyToClipboard = (number: string, method: "nagad" | "bkash"): void => {
     navigator.clipboard.writeText(number);
@@ -142,44 +170,57 @@ const PaymentPage: React.FC<PaymentPageProps> = ({id}:{id:string}) => {
           </h2>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* bKash Option */}
-            <button
-              onClick={() => setSelectedMethod("bkash")}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                selectedMethod === "bkash"
-                  ? "border-pink-500 dark:border-pink-400 bg-pink-50 dark:bg-pink-900/20"
-                  : "border-gray-200 dark:border-gray-600 hover:border-pink-300 dark:hover:border-pink-500"
-              }`}
-            >
-              <div className="text-center">
-                <div className="bg-pink-600 dark:bg-pink-500 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">bKash</span>
+            {/* bKash Option - Only show if number exists */}
+            {paymentNumbers.bkash && paymentNumbers.bkash.trim() !== "" && (
+              <button
+                onClick={() => setSelectedMethod("bkash")}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  selectedMethod === "bkash"
+                    ? "border-pink-500 dark:border-pink-400 bg-pink-50 dark:bg-pink-900/20"
+                    : "border-gray-200 dark:border-gray-600 hover:border-pink-300 dark:hover:border-pink-500"
+                }`}
+              >
+                <div className="text-center">
+                  <div className="bg-pink-600 dark:bg-pink-500 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">bKash</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white">
+                    বিকাশ
+                  </p>
                 </div>
-                <p className="text-sm font-medium text-gray-800 dark:text-white">
-                  বিকাশ
-                </p>
-              </div>
-            </button>
+              </button>
+            )}
 
-            {/* Nagad Option */}
-            <button
-              onClick={() => setSelectedMethod("nagad")}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                selectedMethod === "nagad"
-                  ? "border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20"
-                  : "border-gray-200 dark:border-gray-600 hover:border-orange-300 dark:hover:border-orange-500"
-              }`}
-            >
-              <div className="text-center">
-                <div className="bg-orange-600 dark:bg-orange-500 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">নগদ</span>
+            {/* Nagad Option - Only show if number exists */}
+            {paymentNumbers.nagad && paymentNumbers.nagad.trim() !== "" && (
+              <button
+                onClick={() => setSelectedMethod("nagad")}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  selectedMethod === "nagad"
+                    ? "border-orange-500 dark:border-orange-400 bg-orange-50 dark:bg-orange-900/20"
+                    : "border-gray-200 dark:border-gray-600 hover:border-orange-300 dark:hover:border-orange-500"
+                }`}
+              >
+                <div className="text-center">
+                  <div className="bg-orange-600 dark:bg-orange-500 rounded-lg w-12 h-12 mx-auto mb-3 flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">নগদ</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-800 dark:text-white">
+                    নগদ
+                  </p>
                 </div>
-                <p className="text-sm font-medium text-gray-800 dark:text-white">
-                  নগদ
-                </p>
-              </div>
-            </button>
+              </button>
+            )}
           </div>
+
+          {/* Show message if only one method is available */}
+          {availableMethods.length === 1 && (
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+              <p className="text-sm text-blue-700 dark:text-blue-300 text-center">
+                Only {availableMethods[0] === "bkash" ? "bKash" : "Nagad"} payment is available
+              </p>
+            </div>
+          )}
 
           {/* Payment Instructions */}
           {selectedMethod && (

@@ -1,11 +1,9 @@
 import { getUser } from "@/lib/getUser";
+import { connectDB } from "@/lib/mongodb";
 import TransactionModel from "@/models/Transaction";
 import Withdraw from "@/models/Withdraw";
 import { NextRequest, NextResponse } from "next/server";
 
-// Constants for withdrawal configuration
-const MIN_WITHDRAWAL_AMOUNT = 500;
-const FEE_PERCENTAGE = 5;
 
 interface WithdrawalRequest {
   amount: number;
@@ -18,6 +16,7 @@ export async function POST(request: NextRequest) {
     const body: WithdrawalRequest = await request.json();
     const { amount, method, number } = body;
 
+    const db = await connectDB();
     // Authenticate user
     const user = await getUser();
     if (!user) {
@@ -34,16 +33,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const data = await db.collection("settings").findOne({});
+
     // Calculate fees
-    const fees = calculateFee(amount);
+    const fees = calculateFee(amount, data?.withdraw_fee_percentage);
     const totalDeduction = amount + fees;
 
     // Check minimum withdrawal
-    if (amount < MIN_WITHDRAWAL_AMOUNT) {
+    if (amount < data?.min_withdrawal_amount) {
       return NextResponse.json(
         {
           success: false,
-          message: `Minimum withdrawal amount is ${MIN_WITHDRAWAL_AMOUNT} BDT`,
+          message: `Minimum withdrawal amount is ${data?.min_withdrawal_amount} BDT`,
         },
         { status: 400 }
       );
@@ -118,6 +119,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function calculateFee(amount: number): number {
-  return Math.round(amount / FEE_PERCENTAGE);
+function calculateFee(amount: number, FEE_PERCENTAGE: number) {
+  return Math.round(
+    amount * (FEE_PERCENTAGE / 100)
+  );
 }
