@@ -1,11 +1,29 @@
-'use client';
-import React, { useState, useEffect } from 'react';
-import { 
-  Users, Search, Edit2, Trash2, Ban, CheckCircle, 
-  X, ChevronLeft, ChevronRight, UserCheck, UserX, Mail, 
-  Phone, Calendar, DollarSign, Star, Briefcase, Building2,
-  Shield, Clock, MapPin, TrendingUp, Loader2
-} from 'lucide-react';
+"use client";
+import React, { useState, useEffect } from "react";
+import {
+  Users,
+  Search,
+  Edit2,
+  Ban,
+  CheckCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  UserCheck,
+  UserX,
+  Mail,
+  Phone,
+  Calendar,
+  DollarSign,
+  Star,
+  Briefcase,
+  Building2,
+  Shield,
+  Clock,
+  MapPin,
+  TrendingUp,
+  Loader2,
+} from "lucide-react";
 
 // Type definitions
 interface User {
@@ -16,7 +34,7 @@ interface User {
   email: string;
   phone?: string;
   avatar?: string;
-  userType: 'freelancer' | 'client';
+  userType: "freelancer" | "client";
   isBanned: boolean;
   isActive: boolean;
   isEmailVerified: boolean;
@@ -27,7 +45,7 @@ interface User {
   lastLogin?: string;
   lastSeen?: string;
   location?: string;
-  
+
   // Freelancer specific fields
   rating?: number;
   completedOrders?: number;
@@ -38,7 +56,7 @@ interface User {
   responseTime?: string;
   skills?: string[];
   languages?: string[];
-  
+
   // Client specific fields
   companyName?: string;
   spent?: number;
@@ -63,20 +81,24 @@ interface UserFormData {
 export default function UsersManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'freelancer' | 'client'>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'banned' | 'inactive'>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<"all" | "freelancer" | "client">(
+    "all"
+  );
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "banned" | "inactive"
+  >("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  
+
   // Individual loading states
   const [banLoading, setBanLoading] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState<string | null>(null);
-  
+
   const usersPerPage = 10;
 
   useEffect(() => {
@@ -86,69 +108,73 @@ export default function UsersManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/users');
+      const response = await fetch("/api/users");
       const data = await response.json();
       setUsers(data.users || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
   };
 
- const handleBanToggle = async (userId: string, currentBanStatus: boolean) => {
-  try {
-    setBanLoading(userId);
-    const response = await fetch(`/api/users/${userId}/ban`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isBanned: !currentBanStatus }),
-    });
-    
-    if (response.ok) {
-      // Option 1: Try to get the updated user from response
-      try {
-        const updatedUser = await response.json();
-        console.log(updatedUser)
-        
-        // Update the user locally
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user._id === userId ? { ...user, ...updatedUser } : user
-          )
-        );
-      } catch (jsonError) {
-        // Option 2: If no response body, update just the isBanned field
-        console.log('No response body, updating locally...', jsonError);
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user._id === userId ? { ...user, isBanned: !currentBanStatus } : user
-          )
-        );
+  const handleBanToggle = async (userId: string, currentBanStatus: boolean) => {
+    try {
+      setBanLoading(userId);
+      const response = await fetch(`/api/users/${userId}/ban`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isBanned: !currentBanStatus }),
+      });
+
+      if (response.ok) {
+        // Option 1: Try to get the updated user from response
+        try {
+          const updatedUser = await response.json();
+          console.log(updatedUser);
+
+          // Update the user locally
+          setUsers((prevUsers) =>
+            prevUsers.map((user) =>
+              user._id === userId ? { ...user, ...updatedUser } : user
+            )
+          );
+        } catch (jsonError) {
+          // Option 2: If no response body, update just the isBanned field
+          console.log("No response body, updating locally...", jsonError);
+          setUsers((prevUsers) =>
+            prevUsers.map((user) =>
+              user._id === userId
+                ? { ...user, isBanned: !currentBanStatus }
+                : user
+            )
+          );
+        }
       }
+    } catch (error) {
+      console.error("Error toggling ban:", error);
+    } finally {
+      setBanLoading(null);
     }
-  } catch (error) {
-    console.error('Error toggling ban:', error);
-  } finally {
-    setBanLoading(null);
-  }
-};
+  };
 
   const handleDelete = async (userId: string) => {
     try {
       setDeleteLoading(userId);
       const response = await fetch(`/api/users/${userId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
-      
+
       if (response.ok) {
         // Remove the user locally without refetching all users
-        setUsers(prevUsers => prevUsers.filter(user => user._id !== userId));
+        setUsers((prevUsers) =>
+          prevUsers.filter((user) => user._id !== userId)
+        );
         setShowDeleteModal(false);
         setSelectedUser(null);
       }
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error("Error deleting user:", error);
     } finally {
       setDeleteLoading(null);
     }
@@ -158,17 +184,17 @@ export default function UsersManagement() {
     try {
       setEditLoading(userId);
       const response = await fetch(`/api/users/${userId}/update`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       });
-      
+
       if (response.ok) {
         const updatedUser = await response.json();
-        
+
         // Update the user locally without refetching all users
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
             user._id === userId ? { ...user, ...updatedUser } : user
           )
         );
@@ -176,27 +202,27 @@ export default function UsersManagement() {
         setSelectedUser(null);
       }
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error("Error updating user:", error);
     } finally {
       setEditLoading(null);
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
       user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.username?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === 'all' || user.userType === filterType;
-    
-    const matchesStatus = 
-      filterStatus === 'all' || 
-      (filterStatus === 'active' && !user.isBanned && user.isActive) ||
-      (filterStatus === 'banned' && user.isBanned) ||
-      (filterStatus === 'inactive' && !user.isActive);
-    
+
+    const matchesType = filterType === "all" || user.userType === filterType;
+
+    const matchesStatus =
+      filterStatus === "all" ||
+      (filterStatus === "active" && !user.isBanned && user.isActive) ||
+      (filterStatus === "banned" && user.isBanned) ||
+      (filterStatus === "inactive" && !user.isActive);
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
@@ -207,14 +233,17 @@ export default function UsersManagement() {
 
   const UserCard = ({ user }: { user: User }) => {
     const isBanLoading = banLoading === user._id;
-    
+
     return (
       <div className="bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-xl p-6 border border-gray-200 dark:border-white/20 hover:border-purple-400/50 transition-all duration-300 shadow-lg">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img 
-                src={user.avatar || `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=8b5cf6&color=fff`}
+              <img
+                src={
+                  user.avatar ||
+                  `https://ui-avatars.com/api/?name=${user.firstName}+${user.lastName}&background=8b5cf6&color=fff`
+                }
                 alt={`${user.firstName} ${user.lastName}`}
                 className="w-16 h-16 rounded-full object-cover border-2 border-purple-400"
               />
@@ -231,14 +260,18 @@ export default function UsersManagement() {
                   <CheckCircle className="w-4 h-4 text-green-400" />
                 )}
               </h3>
-              <p className="text-purple-600 dark:text-purple-300">@{user.username}</p>
+              <p className="text-purple-600 dark:text-purple-300">
+                @{user.username}
+              </p>
               <div className="flex items-center gap-2 mt-1">
-                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                  user.userType === 'freelancer' 
-                    ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400' 
-                    : 'bg-green-500/20 text-green-600 dark:text-green-400'
-                }`}>
-                  {user.userType === 'freelancer' ? (
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    user.userType === "freelancer"
+                      ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
+                      : "bg-green-500/20 text-green-600 dark:text-green-400"
+                  }`}
+                >
+                  {user.userType === "freelancer" ? (
                     <span className="flex items-center gap-1">
                       <Briefcase className="w-3 h-3" /> Freelancer
                     </span>
@@ -264,7 +297,7 @@ export default function UsersManagement() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -290,11 +323,11 @@ export default function UsersManagement() {
               onClick={() => handleBanToggle(user._id, user.isBanned)}
               disabled={isBanLoading}
               className={`p-2 rounded-lg transition-colors ${
-                user.isBanned 
-                  ? 'bg-green-500/20 hover:bg-green-500/30' 
-                  : 'bg-orange-500/20 hover:bg-orange-500/30'
-              } ${isBanLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              title={user.isBanned ? 'Unban User' : 'Ban User'}
+                user.isBanned
+                  ? "bg-green-500/20 hover:bg-green-500/30"
+                  : "bg-orange-500/20 hover:bg-orange-500/30"
+              } ${isBanLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+              title={user.isBanned ? "Unban User" : "Ban User"}
             >
               {isBanLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -303,16 +336,6 @@ export default function UsersManagement() {
               ) : (
                 <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
               )}
-            </button>
-            <button
-              onClick={() => {
-                setSelectedUser(user);
-                setShowDeleteModal(true);
-              }}
-              className="p-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg transition-colors"
-              title="Delete User"
-            >
-              <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
             </button>
           </div>
         </div>
@@ -330,40 +353,60 @@ export default function UsersManagement() {
           )}
           <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
             <Calendar className="w-4 h-4" />
-            <span className="text-sm">{new Date(user.createdAt).toLocaleDateString()}</span>
+            <span className="text-sm">
+              {new Date(user.createdAt).toLocaleDateString()}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
             <DollarSign className="w-4 h-4" />
-            <span className="text-sm font-semibold">৳{user.balance?.toFixed(2) || '0.00'}</span>
+            <span className="text-sm font-semibold">
+              ৳{user.balance?.toFixed(2) || "0.00"}
+            </span>
           </div>
         </div>
 
-        {user.userType === 'freelancer' && (
+        {user.userType === "freelancer" && (
           <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
                 <div className="flex items-center justify-center gap-1 text-yellow-500 mb-1">
                   <Star className="w-4 h-4 fill-current" />
-                  <span className="text-sm font-bold">{user.rating?.toFixed(1) || '0.0'}</span>
+                  <span className="text-sm font-bold">
+                    {user.rating?.toFixed(1) || "0.0"}
+                  </span>
                 </div>
-                <p className="text-xs text-purple-600 dark:text-purple-300">Rating</p>
+                <p className="text-xs text-purple-600 dark:text-purple-300">
+                  Rating
+                </p>
               </div>
               <div>
-                <p className="text-gray-900 dark:text-white font-bold text-sm">{user.completedOrders || 0}</p>
-                <p className="text-xs text-purple-600 dark:text-purple-300">Orders</p>
+                <p className="text-gray-900 dark:text-white font-bold text-sm">
+                  {user.completedOrders || 0}
+                </p>
+                <p className="text-xs text-purple-600 dark:text-purple-300">
+                  Orders
+                </p>
               </div>
               <div>
-                <p className="text-gray-900 dark:text-white font-bold text-sm">৳{user.earnings?.toFixed(0) || 0}</p>
-                <p className="text-xs text-purple-600 dark:text-purple-300">Earnings</p>
+                <p className="text-gray-900 dark:text-white font-bold text-sm">
+                  ৳{user.earnings?.toFixed(0) || 0}
+                </p>
+                <p className="text-xs text-purple-600 dark:text-purple-300">
+                  Earnings
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        {user.userType === 'client' && user.companyName && (
+        {user.userType === "client" && user.companyName && (
           <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
-            <p className="text-gray-900 dark:text-white font-semibold text-sm">{user.companyName}</p>
-            <p className="text-purple-600 dark:text-purple-300 text-xs mt-1">Total Spent: ৳{user.spent?.toFixed(2) || '0.00'}</p>
+            <p className="text-gray-900 dark:text-white font-semibold text-sm">
+              {user.companyName}
+            </p>
+            <p className="text-purple-600 dark:text-purple-300 text-xs mt-1">
+              Total Spent: ৳{user.spent?.toFixed(2) || "0.00"}
+            </p>
           </div>
         )}
       </div>
@@ -374,10 +417,12 @@ export default function UsersManagement() {
     if (!selectedUser) return null;
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-3xl w-full border border-purple-400/30 my-8 shadow-xl">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] border border-purple-400/30 shadow-xl overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">User Details</h3>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+              User Details
+            </h3>
             <button
               onClick={() => setShowDetailsModal(false)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -394,32 +439,54 @@ export default function UsersManagement() {
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Full Name</p>
-                  <p className="text-gray-900 dark:text-white font-semibold">{selectedUser.firstName} {selectedUser.lastName}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Full Name
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {selectedUser.firstName} {selectedUser.lastName}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Username</p>
-                  <p className="text-gray-900 dark:text-white font-semibold">@{selectedUser.username}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Username
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    @{selectedUser.username}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Email</p>
-                  <p className="text-gray-900 dark:text-white font-semibold">{selectedUser.email}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Email
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {selectedUser.email}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Phone</p>
-                  <p className="text-gray-900 dark:text-white font-semibold">{selectedUser.phone || 'N/A'}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Phone
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {selectedUser.phone || "N/A"}
+                  </p>
                 </div>
                 {selectedUser.location && (
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Location</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Location
+                    </p>
                     <p className="text-gray-900 dark:text-white font-semibold flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {selectedUser.location}
                     </p>
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">User Type</p>
-                  <p className="text-gray-900 dark:text-white font-semibold capitalize">{selectedUser.userType}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    User Type
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold capitalize">
+                    {selectedUser.userType}
+                  </p>
                 </div>
               </div>
             </div>
@@ -431,39 +498,79 @@ export default function UsersManagement() {
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Email Verified</p>
-                  <p className={`font-semibold ${selectedUser.isEmailVerified ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {selectedUser.isEmailVerified ? 'Yes' : 'No'}
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Email Verified
+                  </p>
+                  <p
+                    className={`font-semibold ${
+                      selectedUser.isEmailVerified
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {selectedUser.isEmailVerified ? "Yes" : "No"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Phone Verified</p>
-                  <p className={`font-semibold ${selectedUser.isPhoneVerified ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {selectedUser.isPhoneVerified ? 'Yes' : 'No'}
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Phone Verified
+                  </p>
+                  <p
+                    className={`font-semibold ${
+                      selectedUser.isPhoneVerified
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-600 dark:text-red-400"
+                    }`}
+                  >
+                    {selectedUser.isPhoneVerified ? "Yes" : "No"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Account Status</p>
-                  <p className={`font-semibold ${selectedUser.isActive ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {selectedUser.isActive ? 'Active' : 'Inactive'}
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Account Status
+                  </p>
+                  <p
+                    className={`font-semibold ${
+                      selectedUser.isActive
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}
+                  >
+                    {selectedUser.isActive ? "Active" : "Inactive"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Ban Status</p>
-                  <p className={`font-semibold ${selectedUser.isBanned ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                    {selectedUser.isBanned ? 'Banned' : 'Not Banned'}
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Ban Status
+                  </p>
+                  <p
+                    className={`font-semibold ${
+                      selectedUser.isBanned
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-green-600 dark:text-green-400"
+                    }`}
+                  >
+                    {selectedUser.isBanned ? "Banned" : "Not Banned"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Last Login</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Last Login
+                  </p>
                   <p className="text-gray-900 dark:text-white font-semibold">
-                    {selectedUser.lastLogin ? new Date(selectedUser.lastLogin).toLocaleString() : 'Never'}
+                    {selectedUser.lastLogin
+                      ? new Date(selectedUser.lastLogin).toLocaleString()
+                      : "Never"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Last Seen</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Last Seen
+                  </p>
                   <p className="text-gray-900 dark:text-white font-semibold">
-                    {selectedUser.lastSeen ? new Date(selectedUser.lastSeen).toLocaleString() : 'N/A'}
+                    {selectedUser.lastSeen
+                      ? new Date(selectedUser.lastSeen).toLocaleString()
+                      : "N/A"}
                   </p>
                 </div>
               </div>
@@ -476,35 +583,56 @@ export default function UsersManagement() {
               </h4>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Balance</p>
-                  <p className="text-gray-900 dark:text-white font-bold text-lg">৳{selectedUser.balance?.toFixed(2) || '0.00'}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Balance
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-bold text-lg">
+                    ৳{selectedUser.balance?.toFixed(2) || "0.00"}
+                  </p>
                 </div>
-                {selectedUser.userType === 'freelancer' && (
+                {selectedUser.userType === "freelancer" && (
                   <>
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">Withdrawable</p>
-                      <p className="text-green-600 dark:text-green-400 font-bold text-lg">৳{selectedUser.withdrawableBalance?.toFixed(2) || '0.00'}</p>
+                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                        Withdrawable
+                      </p>
+                      <p className="text-green-600 dark:text-green-400 font-bold text-lg">
+                        ৳
+                        {selectedUser.withdrawableBalance?.toFixed(2) || "0.00"}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">Pending</p>
-                      <p className="text-yellow-600 dark:text-yellow-400 font-bold text-lg">৳{selectedUser.pendingBalance?.toFixed(2) || '0.00'}</p>
+                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                        Pending
+                      </p>
+                      <p className="text-yellow-600 dark:text-yellow-400 font-bold text-lg">
+                        ৳{selectedUser.pendingBalance?.toFixed(2) || "0.00"}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">Total Earnings</p>
-                      <p className="text-gray-900 dark:text-white font-bold text-lg">৳{selectedUser.earnings?.toFixed(2) || '0.00'}</p>
+                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                        Total Earnings
+                      </p>
+                      <p className="text-gray-900 dark:text-white font-bold text-lg">
+                        ৳{selectedUser.earnings?.toFixed(2) || "0.00"}
+                      </p>
                     </div>
                   </>
                 )}
-                {selectedUser.userType === 'client' && (
+                {selectedUser.userType === "client" && (
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Total Spent</p>
-                    <p className="text-gray-900 dark:text-white font-bold text-lg">৳{selectedUser.spent?.toFixed(2) || '0.00'}</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Total Spent
+                    </p>
+                    <p className="text-gray-900 dark:text-white font-bold text-lg">
+                      ৳{selectedUser.spent?.toFixed(2) || "0.00"}
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {selectedUser.userType === 'freelancer' && (
+            {selectedUser.userType === "freelancer" && (
               <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -512,53 +640,78 @@ export default function UsersManagement() {
                 </h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Rating</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Rating
+                    </p>
                     <p className="text-yellow-600 dark:text-yellow-400 font-bold text-lg flex items-center gap-1">
                       <Star className="w-5 h-5 fill-current" />
-                      {selectedUser.rating?.toFixed(1) || '0.0'}
+                      {selectedUser.rating?.toFixed(1) || "0.0"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Completed Orders</p>
-                    <p className="text-gray-900 dark:text-white font-bold text-lg">{selectedUser.completedOrders || 0}</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Completed Orders
+                    </p>
+                    <p className="text-gray-900 dark:text-white font-bold text-lg">
+                      {selectedUser.completedOrders || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Reviews Count</p>
-                    <p className="text-gray-900 dark:text-white font-bold text-lg">{selectedUser.reviewsCount || 0}</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Reviews Count
+                    </p>
+                    <p className="text-gray-900 dark:text-white font-bold text-lg">
+                      {selectedUser.reviewsCount || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Response Time</p>
-                    <p className="text-gray-900 dark:text-white font-semibold">{selectedUser.responseTime || 'N/A'}</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Response Time
+                    </p>
+                    <p className="text-gray-900 dark:text-white font-semibold">
+                      {selectedUser.responseTime || "N/A"}
+                    </p>
                   </div>
                 </div>
                 {selectedUser.skills && selectedUser.skills.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-gray-600 dark:text-purple-300 text-sm mb-2">Skills</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm mb-2">
+                      Skills
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {selectedUser.skills.map((skill, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full text-sm">
+                        <span
+                          key={idx}
+                          className="px-3 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full text-sm"
+                        >
                           {skill}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
-                {selectedUser.languages && selectedUser.languages.length > 0 && (
-                  <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm mb-2">Languages</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUser.languages.map((lang, idx) => (
-                        <span key={idx} className="px-3 py-1 bg-green-500/20 text-green-600 dark:text-green-400 rounded-full text-sm">
-                          {lang}
-                        </span>
-                      ))}
+                {selectedUser.languages &&
+                  selectedUser.languages.length > 0 && (
+                    <div>
+                      <p className="text-gray-600 dark:text-purple-300 text-sm mb-2">
+                        Languages
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedUser.languages.map((lang, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 bg-green-500/20 text-green-600 dark:text-green-400 rounded-full text-sm"
+                          >
+                            {lang}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
 
-            {selectedUser.userType === 'client' && selectedUser.companyName && (
+            {selectedUser.userType === "client" && selectedUser.companyName && (
               <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
                 <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -566,13 +719,21 @@ export default function UsersManagement() {
                 </h4>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">Company Name</p>
-                    <p className="text-gray-900 dark:text-white font-semibold text-lg">{selectedUser.companyName}</p>
+                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      Company Name
+                    </p>
+                    <p className="text-gray-900 dark:text-white font-semibold text-lg">
+                      {selectedUser.companyName}
+                    </p>
                   </div>
                   {selectedUser.companyDescription && (
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">Company Description</p>
-                      <p className="text-gray-900 dark:text-white">{selectedUser.companyDescription}</p>
+                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                        Company Description
+                      </p>
+                      <p className="text-gray-900 dark:text-white">
+                        {selectedUser.companyDescription}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -586,12 +747,20 @@ export default function UsersManagement() {
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Created At</p>
-                  <p className="text-gray-900 dark:text-white font-semibold">{new Date(selectedUser.createdAt).toLocaleString()}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Created At
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {new Date(selectedUser.createdAt).toLocaleString()}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">Updated At</p>
-                  <p className="text-gray-900 dark:text-white font-semibold">{new Date(selectedUser.updatedAt).toLocaleString()}</p>
+                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    Updated At
+                  </p>
+                  <p className="text-gray-900 dark:text-white font-semibold">
+                    {new Date(selectedUser.updatedAt).toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
@@ -603,27 +772,39 @@ export default function UsersManagement() {
 
   const EditModal = () => {
     const [formData, setFormData] = useState<UserFormData>({
-      firstName: selectedUser?.firstName || '',
-      lastName: selectedUser?.lastName || '',
-      email: selectedUser?.email || '',
-      phone: selectedUser?.phone || '',
-      location: selectedUser?.location || '',
+      firstName: selectedUser?.firstName || "",
+      lastName: selectedUser?.lastName || "",
+      email: selectedUser?.email || "",
+      phone: selectedUser?.phone || "",
+      location: selectedUser?.location || "",
       isActive: selectedUser?.isActive || false,
       balance: selectedUser?.balance || 0,
-      withdrawableBalance: selectedUser?.userType === 'freelancer' ? (selectedUser?.withdrawableBalance || 0) : 0,
-      pendingBalance: selectedUser?.userType === 'freelancer' ? (selectedUser?.pendingBalance || 0) : 0,
-      rating: selectedUser?.userType === 'freelancer' ? (selectedUser?.rating || 0) : 0,
-      companyName: selectedUser?.userType === 'client' ? (selectedUser?.companyName || '') : '',
-      spent: selectedUser?.userType === 'client' ? (selectedUser?.spent || 0) : 0,
+      withdrawableBalance:
+        selectedUser?.userType === "freelancer"
+          ? selectedUser?.withdrawableBalance || 0
+          : 0,
+      pendingBalance:
+        selectedUser?.userType === "freelancer"
+          ? selectedUser?.pendingBalance || 0
+          : 0,
+      rating:
+        selectedUser?.userType === "freelancer" ? selectedUser?.rating || 0 : 0,
+      companyName:
+        selectedUser?.userType === "client"
+          ? selectedUser?.companyName || ""
+          : "",
+      spent: selectedUser?.userType === "client" ? selectedUser?.spent || 0 : 0,
     });
 
     const isEditLoading = editLoading === selectedUser?._id;
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full border border-purple-400/30 my-8 shadow-xl">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] border border-purple-400/30 shadow-xl overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Edit User</h3>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Edit User
+            </h3>
             <button
               onClick={() => setShowEditModal(false)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -632,108 +813,186 @@ export default function UsersManagement() {
             </button>
           </div>
 
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">First Name</label>
+                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  First Name
+                </label>
                 <input
                   type="text"
                   value={formData.firstName}
-                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, firstName: e.target.value })
+                  }
                   className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
                 />
               </div>
               <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Last Name</label>
+                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  Last Name
+                </label>
                 <input
                   type="text"
                   value={formData.lastName}
-                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Phone</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
-                />
-              </div>
-              <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Location</label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastName: e.target.value })
+                  }
                   className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Balance</label>
+              <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  Phone
+                </label>
+                <input
+                  type="text"
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                />
+              </div>
+              <div>
+                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                Balance
+              </label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.balance}
-                onChange={(e) => setFormData({...formData, balance: parseFloat(e.target.value)})}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    balance: parseFloat(e.target.value),
+                  })
+                }
                 className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
               />
             </div>
 
-            {selectedUser?.userType === 'freelancer' && (
+            {selectedUser?.userType === "freelancer" && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-
+                  <div>
+                    <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                      Withdrawable Balance
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.withdrawableBalance}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          withdrawableBalance: parseFloat(e.target.value),
+                        })
+                      }
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                      Pending Balance
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.pendingBalance}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          pendingBalance: parseFloat(e.target.value),
+                        })
+                      }
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Rating (2-5)</label>
+                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                    Rating (2-5)
+                  </label>
                   <input
                     type="number"
                     step="0.1"
                     min="2"
                     max="5"
                     value={formData.rating}
-                    onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        rating: parseFloat(e.target.value),
+                      })
+                    }
                     className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
               </>
             )}
 
-            {selectedUser?.userType === 'client' && (
+            {selectedUser?.userType === "client" && (
               <>
                 <div>
-                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Company Name</label>
+                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                    Company Name
+                  </label>
                   <input
                     type="text"
                     value={formData.companyName}
-                    onChange={(e) => setFormData({...formData, companyName: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, companyName: e.target.value })
+                    }
                     className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Total Spent</label>
+                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                    Total Spent
+                  </label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.spent}
-                    onChange={(e) => setFormData({...formData, spent: parseFloat(e.target.value)})}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        spent: parseFloat(e.target.value),
+                      })
+                    }
                     className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
@@ -745,10 +1004,17 @@ export default function UsersManagement() {
                 type="checkbox"
                 id="isActive"
                 checked={formData.isActive}
-                onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                onChange={(e) =>
+                  setFormData({ ...formData, isActive: e.target.checked })
+                }
                 className="w-4 h-4 rounded text-purple-600 focus:ring-purple-400"
               />
-              <label htmlFor="isActive" className="text-gray-600 dark:text-purple-300 text-sm">Active Account</label>
+              <label
+                htmlFor="isActive"
+                className="text-gray-600 dark:text-purple-300 text-sm"
+              >
+                Active Account
+              </label>
             </div>
           </div>
 
@@ -766,7 +1032,7 @@ export default function UsersManagement() {
               className="flex-1 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-lg text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isEditLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isEditLoading ? 'Saving...' : 'Save Changes'}
+              {isEditLoading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
@@ -781,7 +1047,9 @@ export default function UsersManagement() {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-red-400/30 shadow-xl">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Delete User</h3>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Delete User
+            </h3>
             <button
               onClick={() => setShowDeleteModal(false)}
               className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -791,7 +1059,11 @@ export default function UsersManagement() {
           </div>
 
           <p className="text-gray-600 dark:text-purple-300 mb-6">
-            Are you sure you want to delete <span className="text-gray-900 dark:text-white font-semibold">{selectedUser?.firstName} {selectedUser?.lastName}</span>? This action cannot be undone.
+            Are you sure you want to delete{" "}
+            <span className="text-gray-900 dark:text-white font-semibold">
+              {selectedUser?.firstName} {selectedUser?.lastName}
+            </span>
+            ? This action cannot be undone.
           </p>
 
           <div className="flex gap-3">
@@ -808,7 +1080,7 @@ export default function UsersManagement() {
               className="flex-1 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isDeleteLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isDeleteLoading ? 'Deleting...' : 'Delete'}
+              {isDeleteLoading ? "Deleting..." : "Delete"}
             </button>
           </div>
         </div>
@@ -837,25 +1109,43 @@ export default function UsersManagement() {
             <Users className="w-10 h-10 text-purple-600 dark:text-purple-400" />
             Users Management
           </h1>
-          <p className="text-gray-600 dark:text-purple-300">Manage all users, freelancers, and clients</p>
+          <p className="text-gray-600 dark:text-purple-300">
+            Manage all users, freelancers, and clients
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-xl p-4 border border-gray-200 dark:border-white/20 shadow-lg">
-            <p className="text-gray-600 dark:text-purple-300 text-sm">Total Users</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{users.length}</p>
+            <p className="text-gray-600 dark:text-purple-300 text-sm">
+              Total Users
+            </p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {users.length}
+            </p>
           </div>
           <div className="bg-blue-500/20 backdrop-blur-lg rounded-xl p-4 border border-blue-500/30 shadow-lg">
-            <p className="text-blue-600 dark:text-blue-300 text-sm">Freelancers</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{users.filter(u => u.userType === 'freelancer').length}</p>
+            <p className="text-blue-600 dark:text-blue-300 text-sm">
+              Freelancers
+            </p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {users.filter((u) => u.userType === "freelancer").length}
+            </p>
           </div>
           <div className="bg-green-500/20 backdrop-blur-lg rounded-xl p-4 border border-green-500/30 shadow-lg">
-            <p className="text-green-600 dark:text-green-300 text-sm">Clients</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{users.filter(u => u.userType === 'client').length}</p>
+            <p className="text-green-600 dark:text-green-300 text-sm">
+              Clients
+            </p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {users.filter((u) => u.userType === "client").length}
+            </p>
           </div>
           <div className="bg-red-500/20 backdrop-blur-lg rounded-xl p-4 border border-red-500/30 shadow-lg">
-            <p className="text-red-600 dark:text-red-300 text-sm">Banned Users</p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">{users.filter(u => u.isBanned).length}</p>
+            <p className="text-red-600 dark:text-red-300 text-sm">
+              Banned Users
+            </p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+              {users.filter((u) => u.isBanned).length}
+            </p>
           </div>
         </div>
 
@@ -876,20 +1166,43 @@ export default function UsersManagement() {
             <div>
               <select
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value as 'all' | 'freelancer' | 'client')}
+                onChange={(e) =>
+                  setFilterType(
+                    e.target.value as "all" | "freelancer" | "client"
+                  )
+                }
                 className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
               >
-                <option className='dark:text-gray-900' value="all">All Types</option>
-                <option className='dark:text-gray-900' value="freelancer">Freelancers</option>
-                <option className='dark:text-gray-900' value="client">Clients</option>
+                <option className="dark:text-gray-900" value="all">
+                  All Types
+                </option>
+                <option className="dark:text-gray-900" value="freelancer">
+                  Freelancers
+                </option>
+                <option className="dark:text-gray-900" value="client">
+                  Clients
+                </option>
               </select>
             </div>
             <div>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'banned' | 'inactive')}
+                onChange={(e) =>
+                  setFilterStatus(
+                    e.target.value as "all" | "active" | "banned" | "inactive"
+                  )
+                }
                 className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
-                style={{color: filterStatus === 'all' ? '#9ca3af' : filterStatus === 'active' ? '#34c759' : filterStatus === 'banned' ? '#e11d48' : '#9ca3af'}}
+                style={{
+                  color:
+                    filterStatus === "all"
+                      ? "#9ca3af"
+                      : filterStatus === "active"
+                      ? "#34c759"
+                      : filterStatus === "banned"
+                      ? "#e11d48"
+                      : "#9ca3af",
+                }}
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -900,12 +1213,14 @@ export default function UsersManagement() {
           </div>
 
           <div className="mt-4 flex items-center justify-between text-purple-600 dark:text-purple-300">
-            <p>Showing {currentUsers.length} of {filteredUsers.length} users</p>
+            <p>
+              Showing {currentUsers.length} of {filteredUsers.length} users
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {currentUsers.map(user => (
+          {currentUsers.map((user) => (
             <UserCard key={user._id} user={user} />
           ))}
         </div>
@@ -913,21 +1228,25 @@ export default function UsersManagement() {
         {currentUsers.length === 0 && (
           <div className="text-center py-12 bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-2xl border border-gray-200 dark:border-white/20 shadow-lg">
             <Users className="w-16 h-16 text-purple-600 dark:text-purple-400 mx-auto mb-4" />
-            <p className="text-gray-900 dark:text-white text-xl mb-2">No users found</p>
-            <p className="text-gray-600 dark:text-purple-300">Try adjusting your filters or search term</p>
+            <p className="text-gray-900 dark:text-white text-xl mb-2">
+              No users found
+            </p>
+            <p className="text-gray-600 dark:text-purple-300">
+              Try adjusting your filters or search term
+            </p>
           </div>
         )}
 
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2">
             <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
               className="p-2 bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-white" />
             </button>
-            
+
             {[...Array(totalPages)].map((_, idx) => {
               if (
                 idx === 0 ||
@@ -940,21 +1259,30 @@ export default function UsersManagement() {
                     onClick={() => setCurrentPage(idx + 1)}
                     className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                       currentPage === idx + 1
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                        : 'bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 text-gray-700 dark:text-white'
+                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                        : "bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 text-gray-700 dark:text-white"
                     }`}
                   >
                     {idx + 1}
                   </button>
                 );
               } else if (idx === currentPage - 3 || idx === currentPage + 1) {
-                return <span key={idx} className="text-gray-600 dark:text-white px-2">...</span>;
+                return (
+                  <span
+                    key={idx}
+                    className="text-gray-600 dark:text-white px-2"
+                  >
+                    ...
+                  </span>
+                );
               }
               return null;
             })}
-            
+
             <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
               disabled={currentPage === totalPages}
               className="p-2 bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
