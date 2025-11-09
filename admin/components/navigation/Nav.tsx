@@ -10,6 +10,7 @@ import {
   Package,
   Users,
   BarChart3,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,6 +20,7 @@ const menuItems = [
   { label: "Dashboard", icon: <BarChart3 size={20} />, href: "/dashboard" },
   { label: "Users", icon: <Users size={20} />, href: "/users" },
   { label: "Categories", icon: <Package size={20} />, href: "/categories" },
+  { label: "Withdrawals", icon: <Wallet size={20} />, href: "/withdrawals" },
   { label: "Settings", icon: <Settings size={20} />, href: "/settings" },
 ];
 

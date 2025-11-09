@@ -19,6 +19,7 @@ interface RegisterRequestBody {
   password: string;
   userType: "freelancer" | "client";
   location: ILocation;
+  referrer: string;
 }
 interface ILocation {
   ip: string;
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       userType,
       username,
       location,
+      referrer,
     } = body;
 
     // ✅ Input validation
@@ -80,10 +82,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!["freelancer", "client"].includes(userType)) {
+      return NextResponse.json(
+        { message: "Invalid user type" },
+        { status: 400 }
+      );
+    }
+
+    if (!referrer) {
+      return NextResponse.json(
+        { message: "Referrer is required" },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     const emailLower = email.toLowerCase().trim();
     const usernameLower = username.toLowerCase().trim();
+    let ref;
+
+    if (referrer === "admin-signup-link") {
+      ref = {
+        _id: "admin-signup-link",
+      };
+    }
+
+    if (referrer !== "admin-signup-link") {
+      ref = await User.findById(referrer).lean();
+    }
+    if (!ref) {
+      return NextResponse.json(
+        { message: "Referrer not found" },
+        { status: 404 }
+      );
+    }
 
     // ✅ Check existing user
     const existingUserByEmail = await User.findOne({
@@ -117,6 +150,7 @@ export async function POST(req: NextRequest) {
       isEmailVerified: false,
       isActive: true,
       location: location.country,
+      referrer: ref._id,
       lastLoginIp: location.ip,
       lastLogin: new Date(),
     });
@@ -125,7 +159,7 @@ export async function POST(req: NextRequest) {
       newUser.email
     );
     const user = await User.findById(newUser._id).select("-password");
-   
+
     await sendOTPEmail({
       to: emailLower,
       userName: user?.username,

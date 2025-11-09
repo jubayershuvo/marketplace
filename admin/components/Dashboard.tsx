@@ -267,7 +267,7 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold text-white">Total Revenue</h2>
           </div>
           <p className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-            ${totalRevenue.toLocaleString()}
+            	৳{totalRevenue.toLocaleString()}
           </p>
           <p className="text-purple-300 mt-2">From {data.payments.length} transactions</p>
         </div>
@@ -363,7 +363,7 @@ export default function Dashboard() {
         <div className="mt-8 bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
           <h3 className="text-xl font-bold text-white mb-4">Recent Transactions</h3>
           <div className="space-y-3">
-            {data.payments.slice(-5).reverse().map((payment: Payment, idx: number) => (
+            {data.payments.slice(-10).reverse().map((payment: Payment, idx: number) => (
               <div key={idx} className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${payment.type === 'deposit' ? 'bg-green-500/20' : 'bg-blue-500/20'}`}>
@@ -375,7 +375,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-bold">${payment.amount.toLocaleString()}</p>
+                  <p className="text-white font-bold">৳{payment.amount.toLocaleString()}</p>
                   <p className="text-purple-300 text-sm">{payment.method || 'N/A'}</p>
                 </div>
               </div>

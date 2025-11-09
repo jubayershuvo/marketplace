@@ -15,55 +15,62 @@ interface Transaction extends Document {
 
 const transactionSchema = new Schema<Transaction>(
   {
-    user: { 
-      type: Schema.Types.ObjectId, 
-      ref: "User", 
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      index: true 
+      index: true,
     },
-    type: { 
-      type: String, 
-      enum: ["credit", "debit"], 
-      required: true 
-    },
-    amount: { 
-      type: Number, 
+    type: {
+      type: String,
+      enum: ["credit", "debit"],
       required: true,
-      min: [0, "Amount cannot be negative"] 
     },
-    description: { 
-      type: String, 
+    amount: {
+      type: Number,
       required: true,
-      trim: true 
+      min: [0, "Amount cannot be negative"],
     },
-    status: { 
-      type: String, 
-      enum: ["completed", "pending", "failed"], 
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    status: {
+      type: String,
+      enum: ["completed", "pending", "failed"],
       default: "pending",
-      index: true 
+      index: true,
     },
-    date: { 
-      type: Date, 
+    date: {
+      type: Date,
       default: Date.now,
-      index: true 
+      index: true,
     },
-    order: { 
-      type: Schema.Types.ObjectId, 
-      ref: "Order" 
+    order: {
+      type: Schema.Types.ObjectId,
+      ref: "Order",
     },
-    client: { 
-      type: Schema.Types.ObjectId, 
-      ref: "User" 
+    client: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
     },
-    payment: { 
-      type: Schema.Types.ObjectId, 
-      ref: "Payment" 
+    payment: {
+      type: Schema.Types.ObjectId,
+      ref: "Payment",
     },
     method: {
       type: String,
-      enum: ["order_payment", "withdrawal", "refund", "bonus", "fee"],
+      enum: [
+        "order_payment",
+        "withdrawal",
+        "refund",
+        "bonus",
+        "fee",
+        "admin_payment",
+      ],
       required: true,
-      index: true
+      index: true,
     },
   },
   {
@@ -74,7 +81,6 @@ const transactionSchema = new Schema<Transaction>(
 // Compound indexes for common queries
 transactionSchema.index({ user: 1, status: 1, date: -1 });
 transactionSchema.index({ user: 1, method: 1, date: -1 });
-
 
 const TransactionModel =
   mongoose.models.Transaction ||

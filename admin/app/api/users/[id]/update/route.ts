@@ -23,6 +23,21 @@ export async function PATCH(
       return new Response("User Not Found", { status: 404 });
     }
 
+    if (user.balance !== updates.balance) {
+      db.collection("payments").insertOne({
+        user: new ObjectId(id),
+        amount:
+          updates.balance - user.balance < 0
+            ? -(updates.balance - user.balance)
+            : updates.balance - user.balance,
+        type: user.balance < updates.balance ? "credit" : "debit",
+        status: "completed",
+        date: new Date(),
+        description: "Balance Updated by Admin",
+        method: "admin_payment",
+      });
+    }
+
     const updatedUser = await db
       .collection("users")
       .updateOne({ _id: new ObjectId(id) }, { $set: updates });

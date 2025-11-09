@@ -51,6 +51,8 @@ export interface IUser extends Document {
   companyDescription?: string;
   spent?: number;
 
+  referrer?: ObjectId;
+
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -81,6 +83,7 @@ const UserSchema = new Schema<IUser>(
       enum: ["freelancer", "client"],
       required: true,
     },
+    referrer: { type: Schema.Types.ObjectId, ref: "User" },
     avatar: { type: String, default: "" },
     isEmailVerified: { type: Boolean, default: false },
     isPhoneVerified: { type: Boolean, default: false },

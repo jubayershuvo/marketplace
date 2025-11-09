@@ -699,26 +699,7 @@ export default function UsersManagement() {
             {selectedUser?.userType === 'freelancer' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Withdrawable Balance</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.withdrawableBalance}
-                      onChange={(e) => setFormData({...formData, withdrawableBalance: parseFloat(e.target.value)})}
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Pending Balance</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.pendingBalance}
-                      onChange={(e) => setFormData({...formData, pendingBalance: parseFloat(e.target.value)})}
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
-                    />
-                  </div>
+
                 </div>
                 <div>
                   <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">Rating (2-5)</label>

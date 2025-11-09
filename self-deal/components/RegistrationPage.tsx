@@ -74,7 +74,18 @@ export default function RegisterPage() {
     userType: "client",
   });
   const router = useRouter();
-    const { isLoggedIn, user } = useAppSelector((state) => state.userAuth);
+  const { isLoggedIn, user } = useAppSelector((state) => state.userAuth);
+
+  const [ref, setRef] = useState<string | null>(null);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get("ref");
+    if (ref) {
+      localStorage.setItem("ref", ref);
+    }
+    setRef(localStorage.getItem("ref"));
+  }, []);
 
   // Password strength checker
   const getPasswordStrength = (password: string): number => {
@@ -107,7 +118,6 @@ export default function RegisterPage() {
           latitude: data.loc ? parseFloat(data.loc.split(",")[0]) : null,
           longitude: data.loc ? parseFloat(data.loc.split(",")[1]) : null,
         };
-        console.log(location);
         setLocation(location);
       } catch (error) {
         console.error("Failed to fetch location:", error);
@@ -118,7 +128,7 @@ export default function RegisterPage() {
 
   const passwordStrength = getPasswordStrength(formData.password);
   useEffect(() => {
-    if (user && user.userType !== "guest" || isLoggedIn) {
+    if ((user && user.userType !== "guest") || isLoggedIn) {
       router.push("/");
     }
   }, [user, router]);
@@ -170,6 +180,7 @@ export default function RegisterPage() {
           userType: formData.userType,
           username: formData.username,
           location,
+          referrer: ref,
         }),
       });
 
