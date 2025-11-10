@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavLayout from "@/components/navigation/Nav";
+import ReduxProvider from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,10 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NavLayout >
-
-        {children}
-        </NavLayout>
+        <ReduxProvider>
+          <NavLayout>{children}</NavLayout>
+        </ReduxProvider>
       </body>
     </html>
   );

@@ -33,6 +33,7 @@ export async function PATCH(
         type: user.balance < updates.balance ? "credit" : "debit",
         status: "completed",
         date: new Date(),
+        trxId: "admin",
         description: "Balance Updated by Admin",
         method: "admin_payment",
       });

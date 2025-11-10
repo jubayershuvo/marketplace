@@ -1,8 +1,69 @@
 "use client";
 import Link from "next/link";
-import React from "react";
+import React, { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { adminLogin } from "@/lib/adminSlice";
+
+interface LoginRequestBody {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
 
 function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { isAdminLoggedIn } = useAppSelector((state) => state.adminAuth);
+
+  useEffect(() => {
+    if (isAdminLoggedIn) {
+      router.push("/dashboard");
+    }
+  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const requestBody: LoginRequestBody = {
+        email,
+        password,
+        rememberMe,
+      };
+
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Login successful
+        console.log("Login successful:", data);
+        dispatch(adminLogin(data));
+      } else {
+        // Login failed
+        setError(data.error || "Login failed");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setError("An error occurred during login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-br from-pink-200 via-white to-pink-300 min-h-screen flex items-center justify-center p-4">
       {/* Spinning Gradient Outline */}
@@ -13,9 +74,16 @@ function LoginPage() {
         {/* Form Card */}
         <div className="relative bg-white/80 dark:bg-black/50 backdrop-blur-xl rounded-2xl shadow-xl p-8">
           <h2 className="text-3xl font-extrabold text-center mb-6 bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Login
+           Admin Login
           </h2>
-          <form className="space-y-5">
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label
                 htmlFor="email"
@@ -26,10 +94,14 @@ function LoginPage() {
               <input
                 type="email"
                 id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 transition-all"
                 placeholder="Enter your email"
+                required
               />
             </div>
+
             <div>
               <label
                 htmlFor="password"
@@ -40,26 +112,46 @@ function LoginPage() {
               <input
                 type="password"
                 id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                 placeholder="Enter your password"
+                required
               />
             </div>
+
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-pink-600 bg-gray-100 border-gray-300 rounded focus:ring-pink-500 focus:ring-2"
+              />
+              <label
+                htmlFor="rememberMe"
+                className="ml-2 text-sm text-gray-700 dark:text-gray-200"
+              >
+                Remember me
+              </label>
+            </div>
+
             <button
               type="submit"
-              className="w-full py-2 px-4 rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white font-semibold shadow-md hover:scale-105 transition-transform duration-300"
+              disabled={loading}
+              className="w-full py-2 px-4 rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white font-semibold shadow-md hover:scale-105 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              Login
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-t-2 border-white border-solid rounded-full animate-spin mr-2"></div>
+                  Logging in...
+                </div>
+              ) : (
+                "Login"
+              )}
             </button>
           </form>
-          <p className="mt-6 text-sm text-center text-gray-600 dark:text-gray-300">
-            Don’t have an account?{" "}
-            <Link
-              href="#"
-              className="text-pink-500 font-semibold hover:underline"
-            >
-              Sign Up
-            </Link>
-          </p>
         </div>
       </div>
 

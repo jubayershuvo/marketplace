@@ -13,8 +13,10 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "../ThemeMod";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { adminLogout, adminUpdate } from "@/lib/adminSlice";
 
 const menuItems = [
   { label: "Dashboard", icon: <BarChart3 size={20} />, href: "/dashboard" },
@@ -28,6 +30,9 @@ export default function Nav({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { admin, isAdminLoggedIn } = useAppSelector((state) => state.adminAuth);
+  const router = useRouter();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     let prevWidth = window.innerWidth;
@@ -54,6 +59,29 @@ export default function Nav({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
+    if (isAdminLoggedIn) {
+      async function fetchAdmin() {
+        try {
+          const response = await fetch("/api/profile");
+          const data = await response.json();
+          if (response.ok) {
+            dispatch(adminUpdate(data.admin));
+          } else {
+            console.error("Error fetching admin:", data.message);
+            if (data.statusCode === 401) {
+              dispatch(adminLogout());
+              router.push("/login");
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching admin:", error);
+        }
+      }
+
+      fetchAdmin();
+    }else{
+      router.push("/login");
+    }
   }, []);
 
   if (pathname === "/login" || pathname === "/404") {
@@ -121,20 +149,28 @@ export default function Nav({ children }: { children: React.ReactNode }) {
                     : "hover:bg-white/5"
                 } py-3 mx-2 my-1 rounded-lg transition-all duration-300 ease-in-out group relative`}
               >
-                <span className={`${pathname === item.href ? "text-purple-300" : "text-purple-200"}`}>
+                <span
+                  className={`${
+                    pathname === item.href
+                      ? "text-purple-300"
+                      : "text-purple-200"
+                  }`}
+                >
                   {item.icon}
                 </span>
                 <span
                   className={`ml-3 font-medium transition-all duration-300 ${
                     collapsed ? "opacity-0 absolute left-14" : "opacity-100"
-                  } ${pathname === item.href ? "text-white" : "text-purple-200"}`}
+                  } ${
+                    pathname === item.href ? "text-white" : "text-purple-200"
+                  }`}
                 >
                   {item.label}
                 </span>
               </Link>
             ))}
           </div>
-          
+
           {/* Profile Section */}
           <div className="mt-auto mb-4 border-t border-purple-500/30 pt-4">
             <Link
@@ -149,7 +185,7 @@ export default function Nav({ children }: { children: React.ReactNode }) {
                   collapsed ? "opacity-0 absolute left-14" : "opacity-100"
                 } text-purple-200`}
               >
-                Profile
+                {admin?.name}
               </span>
             </Link>
           </div>
@@ -160,9 +196,7 @@ export default function Nav({ children }: { children: React.ReactNode }) {
           className={`md:hidden fixed top-16 left-0 h-[calc(100%-4rem)] w-64 
             bg-white/10 backdrop-blur-lg border-r border-purple-500/30
             text-gray-100 shadow-lg z-40 transform transition-transform duration-300 
-            ${
-              mobileOpen ? "translate-x-0" : "-translate-x-64"
-            } flex flex-col`}
+            ${mobileOpen ? "translate-x-0" : "-translate-x-64"} flex flex-col`}
         >
           <div className="flex-1 py-4">
             {menuItems.map((item) => (
@@ -176,10 +210,20 @@ export default function Nav({ children }: { children: React.ReactNode }) {
                     : "hover:bg-white/5"
                 }`}
               >
-                <span className={`${pathname === item.href ? "text-purple-300" : "text-purple-200"}`}>
+                <span
+                  className={`${
+                    pathname === item.href
+                      ? "text-purple-300"
+                      : "text-purple-200"
+                  }`}
+                >
                   {item.icon}
                 </span>
-                <span className={`ml-3 font-medium ${pathname === item.href ? "text-white" : "text-purple-200"}`}>
+                <span
+                  className={`ml-3 font-medium ${
+                    pathname === item.href ? "text-white" : "text-purple-200"
+                  }`}
+                >
                   {item.label}
                 </span>
               </Link>
