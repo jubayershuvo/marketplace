@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SettingsModel } from "@/models/Settings"; // adjust path as needed
 import { connectDB } from "@/lib/mongodb";
+import { getAdmin } from "@/lib/getAdmin";
 
 // Ensure MongoDB connection
-
 
 // GET - Fetch settings
 export async function GET() {
   try {
     await connectDB();
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
 
     // Get the first (and should be only) settings document
     let settings = await SettingsModel.findOne();
@@ -48,7 +55,13 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const body = await req.json();
     const {
       bkash,
@@ -142,7 +155,13 @@ export async function PUT(req: NextRequest) {
 export async function DELETE() {
   try {
     await connectDB();
-
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     await SettingsModel.deleteMany({});
 
     return NextResponse.json(

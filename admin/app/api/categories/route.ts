@@ -2,11 +2,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Category from "@/models/Category";
+import { getAdmin } from "@/lib/getAdmin";
 
 // GET - Fetch all categories
 export async function GET() {
   try {
     await connectDB();
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const categories = await Category.find({}).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: categories });
   } catch (error) {
@@ -21,9 +29,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const body = await request.json();
     const { label, subcategories } = body;
-console.log(subcategories)
+    console.log(subcategories);
     if (!label?.trim()) {
       return NextResponse.json(
         { success: false, error: "Label is required" },
@@ -55,7 +70,7 @@ console.log(subcategories)
             return { label: subLabel, value: subValue };
           })
         : [];
-console.log(value,label,subcategoryObjects)
+    console.log(value, label, subcategoryObjects);
     // Create new category
     const category = await Category.create({
       value,
@@ -70,7 +85,7 @@ console.log(value,label,subcategoryObjects)
   } catch (error) {
     console.error("Error creating category:", error);
     return NextResponse.json(
-      { success: false, error: error|| "Failed to create category" },
+      { success: false, error: error || "Failed to create category" },
       { status: 500 }
     );
   }

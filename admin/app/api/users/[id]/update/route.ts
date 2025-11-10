@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
+import { getAdmin } from "@/lib/getAdmin";
 
 export async function PATCH(
   request: NextRequest,
@@ -13,6 +14,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const db = await connectDB();
     const updates = await request.json();
     const user = await db
@@ -24,7 +32,7 @@ export async function PATCH(
     }
 
     if (user.balance !== updates.balance) {
-      db.collection("payments").insertOne({
+      db.collection("transactions").insertOne({
         user: new ObjectId(id),
         amount:
           updates.balance - user.balance < 0

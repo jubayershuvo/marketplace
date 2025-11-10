@@ -112,9 +112,9 @@ export default function AdminProfile() {
         body: JSON.stringify(updateData),
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await response.json();
 
+      if (response.ok && data.success) {
         // Update Redux store with new admin data
         dispatch(
           adminLogin({
@@ -124,7 +124,10 @@ export default function AdminProfile() {
           })
         );
 
-        setMessage({ type: "success", text: "Profile updated successfully" });
+        setMessage({
+          type: "success",
+          text: data.message || "Profile updated successfully",
+        });
         setEditing(false);
         setUpdateData({
           currentPassword: "",
@@ -132,10 +135,9 @@ export default function AdminProfile() {
           confirmPassword: "",
         });
       } else {
-        const error = await response.json();
         setMessage({
           type: "error",
-          text: error.message || "Failed to update profile",
+          text: data.error || "Failed to update profile",
         });
       }
     } catch (error) {
@@ -148,7 +150,6 @@ export default function AdminProfile() {
       setSaving(false);
     }
   };
-
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleString("en-US", {

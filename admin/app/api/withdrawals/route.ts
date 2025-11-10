@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { getAdmin } from "@/lib/getAdmin";
 
 interface WithdrawalUpdateData {
   status: "pending" | "completed" | "rejected";
@@ -16,6 +17,13 @@ interface UpdateRequestBody {
 export async function GET(req: NextRequest) {
   try {
     const db = await connectDB();
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const withdrawals = await db
       .collection("withdraws")
       .aggregate([
@@ -33,7 +41,8 @@ export async function GET(req: NextRequest) {
             preserveNullAndEmptyArrays: true,
           },
         },
-      ]).sort({ createdAt: -1 })
+      ])
+      .sort({ createdAt: -1 })
       .toArray();
     return NextResponse.json({ withdrawals });
   } catch (error) {
@@ -61,7 +70,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const db = await connectDB();
-
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const id = ids[0];
 
     const withdrawal = await db

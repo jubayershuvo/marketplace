@@ -42,7 +42,7 @@ const adminSchema = new Schema<IAdmin>(
       type: String, 
       required: true, 
       enum: ["admin", "moderator"],
-      default: "moderator"
+      default: "admin"
     },
     lockUntil: { 
       type: Date, 

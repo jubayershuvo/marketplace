@@ -1,6 +1,7 @@
 import { connectDB } from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { getAdmin } from "@/lib/getAdmin";
 
 export async function PATCH(
   request: NextRequest,
@@ -13,6 +14,13 @@ export async function PATCH(
   try {
     const { id } =await params;
     const db = await connectDB();
+        const admin = await getAdmin();
+        if (!admin) {
+          return NextResponse.json(
+            { success: false, error: "You are not authorized" },
+            { status: 401 }
+          );
+        }
     const user = await db
       .collection("users")
       .findOne({ _id: new ObjectId(id) });

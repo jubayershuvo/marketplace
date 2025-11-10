@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Category from "@/models/Category";
+import { getAdmin } from "@/lib/getAdmin";
 
 // GET single category
 export async function GET(
@@ -10,6 +11,14 @@ export async function GET(
 ) {
   try {
     await connectDB();
+
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
     const category = await Category.findById(id);
 
@@ -36,6 +45,13 @@ export async function PUT(
 ) {
   try {
     await connectDB();
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const body = await request.json();
     const { value, label, subcategories } = body;
     const id = (await params).id;
@@ -68,6 +84,13 @@ export async function DELETE(
 ) {
   try {
     await connectDB();
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: "You are not authorized" },
+        { status: 401 }
+      );
+    }
     const { id } = await params;
     const category = await Category.findByIdAndDelete(id);
 

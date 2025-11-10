@@ -14,9 +14,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import ThemeToggle from "../ThemeMod";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { adminLogout, adminUpdate } from "@/lib/adminSlice";
+import axios from "axios";
 
 const menuItems = [
   { label: "Dashboard", icon: <BarChart3 size={20} />, href: "/dashboard" },
@@ -62,24 +62,42 @@ export default function Nav({ children }: { children: React.ReactNode }) {
     if (isAdminLoggedIn) {
       async function fetchAdmin() {
         try {
-          const response = await fetch("/api/profile");
-          const data = await response.json();
-          if (response.ok) {
+          const { data, status } = await axios.get("/api/profile");
+          if (data.admin) {
             dispatch(adminUpdate(data.admin));
           } else {
-            console.error("Error fetching admin:", data.message);
-            if (data.statusCode === 401) {
+            console.error("Error fetching admin:", data.message, status);
+            if (status === 401) {
               dispatch(adminLogout());
               router.push("/login");
             }
           }
-        } catch (error) {
-          console.error("Error fetching admin:", error);
+        }catch (error: unknown) {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error
+          ) {
+            const err = error as { response?: { status?: number } };
+            if (err.response?.status === 401) {
+              dispatch(adminLogout());
+              router.push("/login");
+            }
+          } else if (error instanceof Error) {
+            console.error("Error fetching profile:", error.message);
+          } else if (typeof error === "object" && error !== null) {
+            console.error(
+              "Error fetching profile:",
+              JSON.stringify(error)
+            );
+          } else {
+            console.error("Error fetching profile:", String(error));
+          }
         }
       }
 
       fetchAdmin();
-    }else{
+    } else {
       router.push("/login");
     }
   }, []);
@@ -124,7 +142,6 @@ export default function Nav({ children }: { children: React.ReactNode }) {
             Admin Panel
           </h1>
         </div>
-        <ThemeToggle />
       </header>
 
       {/* BODY */}
@@ -237,7 +254,9 @@ export default function Nav({ children }: { children: React.ReactNode }) {
               className="flex items-center px-4 py-3 mx-2 rounded-lg hover:bg-white/5 transition-all"
             >
               <User size={20} className="text-purple-200" />
-              <span className="ml-3 font-medium text-purple-200">Profile</span>
+              <span className="ml-3 font-medium text-purple-200">
+                {admin?.name}
+              </span>
             </Link>
           </div>
         </div>
