@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import {
   Menu,
   X,
@@ -8,14 +8,22 @@ import {
   Settings,
   ArrowLeftToLine,
   ArrowRightToLine,
+  Pen,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "../ThemeMod";
 import LogoutButton from "../Logout";
+import { Toaster } from "react-hot-toast";
+import useDevToolsDetection from "@/lib/useDevToolsDetection";
 
 const menuItems = [
   { label: "Home", icon: <Home size={20} />, href: "/" },
+  {
+    label: "Birth Correction",
+    icon: <Pen size={20} />,
+    href: "/birth-correction",
+  },
   { label: "Profile", icon: <User size={20} />, href: "/profile" },
   { label: "Settings", icon: <Settings size={20} />, href: "/settings" },
 ];
@@ -24,6 +32,7 @@ export default function Nav({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  // const isBlocked = useDevToolsDetection();
 
   useEffect(() => {
     let prevWidth = window.innerWidth;
@@ -49,9 +58,9 @@ export default function Nav({ children }: { children: React.ReactNode }) {
   }, []);
   const [mounted, setMounted] = useState(false);
 
-useEffect(() => {
-  setMounted(true);
-}, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   if (pathname === "/login" || pathname === "/404") {
     return <>{children}</>;
@@ -64,6 +73,7 @@ useEffect(() => {
   return (
     <div className="flex flex-col h-screen w-screen">
       {/* HEADER */}
+      <Toaster position="top-right" reverseOrder={false} />
       <header
         className="w-full h-16 bg-gradient-to-r from-indigo-600 via-indigo-500 to-teal-500 
         flex items-center justify-between px-4 shadow-md"
@@ -138,14 +148,11 @@ useEffect(() => {
               <User size={20} />
               <span
                 className={`ml-3 font-medium transition-all duration-300 ${
-                  collapsed
-                    ? "opacity-0 absolute left-14"
-                    : "opacity-100"
+                  collapsed ? "opacity-0 absolute left-14" : "opacity-100"
                 }`}
               >
                 Profile
               </span>
-              
             </Link>
           </div>
         </aside>
@@ -195,7 +202,7 @@ useEffect(() => {
 
         {/* MAIN CONTENT */}
         <main
-          className="flex-1 overflow-auto p-4 
+          className="flex-1 overflow-auto 
             text-gray-900 dark:text-gray-100 
             bg-gradient-to-b from-white to-slate-50 
             dark:from-slate-950 dark:to-slate-900"

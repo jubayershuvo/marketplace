@@ -263,8 +263,7 @@ export default function Nav({ children }: { children: React.ReactNode }) {
 
         {/* MAIN CONTENT */}
         <main
-          className="flex-1 overflow-auto p-6 
-            text-gray-900 dark:text-gray-100 
+          className="flex-1 overflow-auto p-6   dark:text-gray-100 
             bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
         >
           {children}

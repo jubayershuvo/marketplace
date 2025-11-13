@@ -235,7 +235,7 @@ export default function UsersManagement() {
     const isBanLoading = banLoading === user._id;
 
     return (
-      <div className="bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-xl p-6 border border-gray-200 dark:border-white/20 hover:border-purple-400/50 transition-all duration-300 shadow-lg">
+      <div className="bg-gray-800/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:border-purple-400/50 transition-all duration-300 shadow-lg">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -254,21 +254,21 @@ export default function UsersManagement() {
               )}
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
                 {user.firstName} {user.lastName}
                 {user.isEmailVerified && (
                   <CheckCircle className="w-4 h-4 text-green-400" />
                 )}
               </h3>
-              <p className="text-purple-600 dark:text-purple-300">
+              <p className="text-purple-300">
                 @{user.username}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <span
                   className={`px-2 py-1 rounded-full text-xs font-semibold ${
                     user.userType === "freelancer"
-                      ? "bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                      : "bg-green-500/20 text-green-600 dark:text-green-400"
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "bg-green-500/20 text-green-400"
                   }`}
                 >
                   {user.userType === "freelancer" ? (
@@ -282,15 +282,15 @@ export default function UsersManagement() {
                   )}
                 </span>
                 {user.isBanned ? (
-                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-600 dark:text-red-400">
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400">
                     Banned
                   </span>
                 ) : user.isActive ? (
-                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-600 dark:text-green-400">
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400">
                     Active
                   </span>
                 ) : (
-                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-600 dark:text-gray-400">
+                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-400">
                     Inactive
                   </span>
                 )}
@@ -307,7 +307,7 @@ export default function UsersManagement() {
               className="p-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg transition-colors"
               title="View Details"
             >
-              <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <Shield className="w-4 h-4 text-purple-400" />
             </button>
             <button
               onClick={() => {
@@ -317,7 +317,7 @@ export default function UsersManagement() {
               className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors"
               title="Edit User"
             >
-              <Edit2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <Edit2 className="w-4 h-4 text-blue-400" />
             </button>
             <button
               onClick={() => handleBanToggle(user._id, user.isBanned)}
@@ -332,32 +332,32 @@ export default function UsersManagement() {
               {isBanLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : user.isBanned ? (
-                <UserCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+                <UserCheck className="w-4 h-4 text-green-400" />
               ) : (
-                <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <UserX className="w-4 h-4 text-orange-400" />
               )}
             </button>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+          <div className="flex items-center gap-2 text-purple-300">
             <Mail className="w-4 h-4" />
             <span className="text-sm truncate">{user.email}</span>
           </div>
           {user.phone && (
-            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+            <div className="flex items-center gap-2 text-purple-300">
               <Phone className="w-4 h-4" />
               <span className="text-sm">{user.phone}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+          <div className="flex items-center gap-2 text-purple-300">
             <Calendar className="w-4 h-4" />
             <span className="text-sm">
               {new Date(user.createdAt).toLocaleDateString()}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300">
+          <div className="flex items-center gap-2 text-purple-300">
             <DollarSign className="w-4 h-4" />
             <span className="text-sm font-semibold">
               ৳{user.balance?.toFixed(2) || "0.00"}
@@ -375,23 +375,23 @@ export default function UsersManagement() {
                     {user.rating?.toFixed(1) || "0.0"}
                   </span>
                 </div>
-                <p className="text-xs text-purple-600 dark:text-purple-300">
+                <p className="text-xs text-purple-300">
                   Rating
                 </p>
               </div>
               <div>
-                <p className="text-gray-900 dark:text-white font-bold text-sm">
+                <p className="text-white font-bold text-sm">
                   {user.completedOrders || 0}
                 </p>
-                <p className="text-xs text-purple-600 dark:text-purple-300">
+                <p className="text-xs text-purple-300">
                   Orders
                 </p>
               </div>
               <div>
-                <p className="text-gray-900 dark:text-white font-bold text-sm">
+                <p className="text-white font-bold text-sm">
                   ৳{user.earnings?.toFixed(0) || 0}
                 </p>
-                <p className="text-xs text-purple-600 dark:text-purple-300">
+                <p className="text-xs text-purple-300">
                   Earnings
                 </p>
               </div>
@@ -401,10 +401,10 @@ export default function UsersManagement() {
 
         {user.userType === "client" && user.companyName && (
           <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
-            <p className="text-gray-900 dark:text-white font-semibold text-sm">
+            <p className="text-white font-semibold text-sm">
               {user.companyName}
             </p>
-            <p className="text-purple-600 dark:text-purple-300 text-xs mt-1">
+            <p className="text-purple-300 text-xs mt-1">
               Total Spent: ৳{user.spent?.toFixed(2) || "0.00"}
             </p>
           </div>
@@ -418,156 +418,156 @@ export default function UsersManagement() {
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] border border-purple-400/30 shadow-xl overflow-y-auto">
+        <div className="bg-gray-800 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] border border-purple-400/30 shadow-xl overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-2xl font-bold text-white">
               User Details
             </h3>
             <button
               onClick={() => setShowDetailsModal(false)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-600 dark:text-white" />
+              <X className="w-5 h-5 text-white" />
             </button>
           </div>
 
           <div className="space-y-6">
-            <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <Users className="w-5 h-5 text-purple-400" />
                 Basic Information
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Full Name
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {selectedUser.firstName} {selectedUser.lastName}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Username
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     @{selectedUser.username}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Email
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {selectedUser.email}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Phone
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {selectedUser.phone || "N/A"}
                   </p>
                 </div>
                 {selectedUser.location && (
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Location
                     </p>
-                    <p className="text-gray-900 dark:text-white font-semibold flex items-center gap-1">
+                    <p className="text-white font-semibold flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> {selectedUser.location}
                     </p>
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     User Type
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold capitalize">
+                  <p className="text-white font-semibold capitalize">
                     {selectedUser.userType}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-400" />
                 Account Status
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Email Verified
                   </p>
                   <p
                     className={`font-semibold ${
                       selectedUser.isEmailVerified
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
+                        ? "text-green-400"
+                        : "text-red-400"
                     }`}
                   >
                     {selectedUser.isEmailVerified ? "Yes" : "No"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Phone Verified
                   </p>
                   <p
                     className={`font-semibold ${
                       selectedUser.isPhoneVerified
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-red-600 dark:text-red-400"
+                        ? "text-green-400"
+                        : "text-red-400"
                     }`}
                   >
                     {selectedUser.isPhoneVerified ? "Yes" : "No"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Account Status
                   </p>
                   <p
                     className={`font-semibold ${
                       selectedUser.isActive
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-gray-600 dark:text-gray-400"
+                        ? "text-green-400"
+                        : "text-gray-400"
                     }`}
                   >
                     {selectedUser.isActive ? "Active" : "Inactive"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Ban Status
                   </p>
                   <p
                     className={`font-semibold ${
                       selectedUser.isBanned
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-green-600 dark:text-green-400"
+                        ? "text-red-400"
+                        : "text-green-400"
                     }`}
                   >
                     {selectedUser.isBanned ? "Banned" : "Not Banned"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Last Login
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {selectedUser.lastLogin
                       ? new Date(selectedUser.lastLogin).toLocaleString()
                       : "Never"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Last Seen
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {selectedUser.lastSeen
                       ? new Date(selectedUser.lastSeen).toLocaleString()
                       : "N/A"}
@@ -576,44 +576,44 @@ export default function UsersManagement() {
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-purple-400" />
                 Financial Information
               </h4>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Balance
                   </p>
-                  <p className="text-gray-900 dark:text-white font-bold text-lg">
+                  <p className="text-white font-bold text-lg">
                     ৳{selectedUser.balance?.toFixed(2) || "0.00"}
                   </p>
                 </div>
                 {selectedUser.userType === "freelancer" && (
                   <>
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      <p className="text-purple-300 text-sm">
                         Withdrawable
                       </p>
-                      <p className="text-green-600 dark:text-green-400 font-bold text-lg">
+                      <p className="text-green-400 font-bold text-lg">
                         ৳
                         {selectedUser.withdrawableBalance?.toFixed(2) || "0.00"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      <p className="text-purple-300 text-sm">
                         Pending
                       </p>
-                      <p className="text-yellow-600 dark:text-yellow-400 font-bold text-lg">
+                      <p className="text-yellow-400 font-bold text-lg">
                         ৳{selectedUser.pendingBalance?.toFixed(2) || "0.00"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      <p className="text-purple-300 text-sm">
                         Total Earnings
                       </p>
-                      <p className="text-gray-900 dark:text-white font-bold text-lg">
+                      <p className="text-white font-bold text-lg">
                         ৳{selectedUser.earnings?.toFixed(2) || "0.00"}
                       </p>
                     </div>
@@ -621,10 +621,10 @@ export default function UsersManagement() {
                 )}
                 {selectedUser.userType === "client" && (
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Total Spent
                     </p>
-                    <p className="text-gray-900 dark:text-white font-bold text-lg">
+                    <p className="text-white font-bold text-lg">
                       ৳{selectedUser.spent?.toFixed(2) || "0.00"}
                     </p>
                   </div>
@@ -633,56 +633,56 @@ export default function UsersManagement() {
             </div>
 
             {selectedUser.userType === "freelancer" && (
-              <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-purple-400" />
                   Freelancer Stats
                 </h4>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Rating
                     </p>
-                    <p className="text-yellow-600 dark:text-yellow-400 font-bold text-lg flex items-center gap-1">
+                    <p className="text-yellow-400 font-bold text-lg flex items-center gap-1">
                       <Star className="w-5 h-5 fill-current" />
                       {selectedUser.rating?.toFixed(1) || "0.0"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Completed Orders
                     </p>
-                    <p className="text-gray-900 dark:text-white font-bold text-lg">
+                    <p className="text-white font-bold text-lg">
                       {selectedUser.completedOrders || 0}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Reviews Count
                     </p>
-                    <p className="text-gray-900 dark:text-white font-bold text-lg">
+                    <p className="text-white font-bold text-lg">
                       {selectedUser.reviewsCount || 0}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Response Time
                     </p>
-                    <p className="text-gray-900 dark:text-white font-semibold">
+                    <p className="text-white font-semibold">
                       {selectedUser.responseTime || "N/A"}
                     </p>
                   </div>
                 </div>
                 {selectedUser.skills && selectedUser.skills.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-gray-600 dark:text-purple-300 text-sm mb-2">
+                    <p className="text-purple-300 text-sm mb-2">
                       Skills
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {selectedUser.skills.map((skill, idx) => (
                         <span
                           key={idx}
-                          className="px-3 py-1 bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full text-sm"
+                          className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm"
                         >
                           {skill}
                         </span>
@@ -693,14 +693,14 @@ export default function UsersManagement() {
                 {selectedUser.languages &&
                   selectedUser.languages.length > 0 && (
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm mb-2">
+                      <p className="text-purple-300 text-sm mb-2">
                         Languages
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {selectedUser.languages.map((lang, idx) => (
                           <span
                             key={idx}
-                            className="px-3 py-1 bg-green-500/20 text-green-600 dark:text-green-400 rounded-full text-sm"
+                            className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm"
                           >
                             {lang}
                           </span>
@@ -712,26 +712,26 @@ export default function UsersManagement() {
             )}
 
             {selectedUser.userType === "client" && selectedUser.companyName && (
-              <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-purple-400" />
                   Company Information
                 </h4>
                 <div className="space-y-3">
                   <div>
-                    <p className="text-gray-600 dark:text-purple-300 text-sm">
+                    <p className="text-purple-300 text-sm">
                       Company Name
                     </p>
-                    <p className="text-gray-900 dark:text-white font-semibold text-lg">
+                    <p className="text-white font-semibold text-lg">
                       {selectedUser.companyName}
                     </p>
                   </div>
                   {selectedUser.companyDescription && (
                     <div>
-                      <p className="text-gray-600 dark:text-purple-300 text-sm">
+                      <p className="text-purple-300 text-sm">
                         Company Description
                       </p>
-                      <p className="text-gray-900 dark:text-white">
+                      <p className="text-white">
                         {selectedUser.companyDescription}
                       </p>
                     </div>
@@ -740,25 +740,25 @@ export default function UsersManagement() {
               </div>
             )}
 
-            <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-purple-400" />
                 Timestamps
               </h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Created At
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {new Date(selectedUser.createdAt).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-purple-300 text-sm">
+                  <p className="text-purple-300 text-sm">
                     Updated At
                   </p>
-                  <p className="text-gray-900 dark:text-white font-semibold">
+                  <p className="text-white font-semibold">
                     {new Date(selectedUser.updatedAt).toLocaleString()}
                   </p>
                 </div>
@@ -800,23 +800,23 @@ export default function UsersManagement() {
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] border border-purple-400/30 shadow-xl overflow-y-auto">
+        <div className="bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] border border-purple-400/30 shadow-xl overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-2xl font-bold text-white">
               Edit User
             </h3>
             <button
               onClick={() => setShowEditModal(false)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-600 dark:text-white" />
+              <X className="w-5 h-5 text-white" />
             </button>
           </div>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                <label className="text-purple-300 text-sm mb-1 block">
                   First Name
                 </label>
                 <input
@@ -825,11 +825,11 @@ export default function UsersManagement() {
                   onChange={(e) =>
                     setFormData({ ...formData, firstName: e.target.value })
                   }
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                 />
               </div>
               <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                <label className="text-purple-300 text-sm mb-1 block">
                   Last Name
                 </label>
                 <input
@@ -838,13 +838,13 @@ export default function UsersManagement() {
                   onChange={(e) =>
                     setFormData({ ...formData, lastName: e.target.value })
                   }
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+              <label className="text-purple-300 text-sm mb-1 block">
                 Email
               </label>
               <input
@@ -853,13 +853,13 @@ export default function UsersManagement() {
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
-                className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                <label className="text-purple-300 text-sm mb-1 block">
                   Phone
                 </label>
                 <input
@@ -868,11 +868,11 @@ export default function UsersManagement() {
                   onChange={(e) =>
                     setFormData({ ...formData, phone: e.target.value })
                   }
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                 />
               </div>
               <div>
-                <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                <label className="text-purple-300 text-sm mb-1 block">
                   Location
                 </label>
                 <input
@@ -881,13 +881,13 @@ export default function UsersManagement() {
                   onChange={(e) =>
                     setFormData({ ...formData, location: e.target.value })
                   }
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+              <label className="text-purple-300 text-sm mb-1 block">
                 Balance
               </label>
               <input
@@ -900,7 +900,7 @@ export default function UsersManagement() {
                     balance: parseFloat(e.target.value),
                   })
                 }
-                className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
               />
             </div>
 
@@ -908,7 +908,7 @@ export default function UsersManagement() {
               <>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                    <label className="text-purple-300 text-sm mb-1 block">
                       Withdrawable Balance
                     </label>
                     <input
@@ -921,11 +921,11 @@ export default function UsersManagement() {
                           withdrawableBalance: parseFloat(e.target.value),
                         })
                       }
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                    <label className="text-purple-300 text-sm mb-1 block">
                       Pending Balance
                     </label>
                     <input
@@ -938,12 +938,12 @@ export default function UsersManagement() {
                           pendingBalance: parseFloat(e.target.value),
                         })
                       }
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                      className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  <label className="text-purple-300 text-sm mb-1 block">
                     Rating (2-5)
                   </label>
                   <input
@@ -958,7 +958,7 @@ export default function UsersManagement() {
                         rating: parseFloat(e.target.value),
                       })
                     }
-                    className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
               </>
@@ -967,7 +967,7 @@ export default function UsersManagement() {
             {selectedUser?.userType === "client" && (
               <>
                 <div>
-                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  <label className="text-purple-300 text-sm mb-1 block">
                     Company Name
                   </label>
                   <input
@@ -976,11 +976,11 @@ export default function UsersManagement() {
                     onChange={(e) =>
                       setFormData({ ...formData, companyName: e.target.value })
                     }
-                    className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 dark:text-purple-300 text-sm mb-1 block">
+                  <label className="text-purple-300 text-sm mb-1 block">
                     Total Spent
                   </label>
                   <input
@@ -993,7 +993,7 @@ export default function UsersManagement() {
                         spent: parseFloat(e.target.value),
                       })
                     }
-                    className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-400"
                   />
                 </div>
               </>
@@ -1011,7 +1011,7 @@ export default function UsersManagement() {
               />
               <label
                 htmlFor="isActive"
-                className="text-gray-600 dark:text-purple-300 text-sm"
+                className="text-purple-300 text-sm"
               >
                 Active Account
               </label>
@@ -1022,7 +1022,7 @@ export default function UsersManagement() {
             <button
               onClick={() => setShowEditModal(false)}
               disabled={isEditLoading}
-              className="flex-1 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-lg text-gray-700 dark:text-white font-semibold transition-colors disabled:opacity-50"
+              className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-semibold transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -1045,22 +1045,22 @@ export default function UsersManagement() {
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-red-400/30 shadow-xl">
+        <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-red-400/30 shadow-xl">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h3 className="text-2xl font-bold text-white">
               Delete User
             </h3>
             <button
               onClick={() => setShowDeleteModal(false)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-600 dark:text-white" />
+              <X className="w-5 h-5 text-white" />
             </button>
           </div>
 
-          <p className="text-gray-600 dark:text-purple-300 mb-6">
+          <p className="text-purple-300 mb-6">
             Are you sure you want to delete{" "}
-            <span className="text-gray-900 dark:text-white font-semibold">
+            <span className="text-white font-semibold">
               {selectedUser?.firstName} {selectedUser?.lastName}
             </span>
             ? This action cannot be undone.
@@ -1070,7 +1070,7 @@ export default function UsersManagement() {
             <button
               onClick={() => setShowDeleteModal(false)}
               disabled={isDeleteLoading}
-              className="flex-1 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 rounded-lg text-gray-700 dark:text-white font-semibold transition-colors disabled:opacity-50"
+              className="flex-1 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white font-semibold transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -1102,64 +1102,64 @@ export default function UsersManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-purple-50 dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-            <Users className="w-10 h-10 text-purple-600 dark:text-purple-400" />
+          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+            <Users className="w-10 h-10 text-purple-400" />
             Users Management
           </h1>
-          <p className="text-gray-600 dark:text-purple-300">
+          <p className="text-purple-300">
             Manage all users, freelancers, and clients
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-xl p-4 border border-gray-200 dark:border-white/20 shadow-lg">
-            <p className="text-gray-600 dark:text-purple-300 text-sm">
+          <div className="bg-gray-800/10 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-lg">
+            <p className="text-purple-300 text-sm">
               Total Users
             </p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="text-3xl font-bold text-white">
               {users.length}
             </p>
           </div>
           <div className="bg-blue-500/20 backdrop-blur-lg rounded-xl p-4 border border-blue-500/30 shadow-lg">
-            <p className="text-blue-600 dark:text-blue-300 text-sm">
+            <p className="text-blue-300 text-sm">
               Freelancers
             </p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="text-3xl font-bold text-white">
               {users.filter((u) => u.userType === "freelancer").length}
             </p>
           </div>
           <div className="bg-green-500/20 backdrop-blur-lg rounded-xl p-4 border border-green-500/30 shadow-lg">
-            <p className="text-green-600 dark:text-green-300 text-sm">
+            <p className="text-green-300 text-sm">
               Clients
             </p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="text-3xl font-bold text-white">
               {users.filter((u) => u.userType === "client").length}
             </p>
           </div>
           <div className="bg-red-500/20 backdrop-blur-lg rounded-xl p-4 border border-red-500/30 shadow-lg">
-            <p className="text-red-600 dark:text-red-300 text-sm">
+            <p className="text-red-300 text-sm">
               Banned Users
             </p>
-            <p className="text-3xl font-bold text-gray-900 dark:text-white">
+            <p className="text-3xl font-bold text-white">
               {users.filter((u) => u.isBanned).length}
             </p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 dark:border-white/20 shadow-lg mb-6">
+        <div className="bg-gray-800/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 shadow-lg mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-600 dark:text-purple-300" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-300" />
                 <input
                   type="text"
                   placeholder="Search by name, email, or username..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-purple-600 dark:placeholder-purple-300 focus:outline-none focus:border-purple-400"
+                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:border-purple-400"
                 />
               </div>
             </div>
@@ -1171,17 +1171,11 @@ export default function UsersManagement() {
                     e.target.value as "all" | "freelancer" | "client"
                   )
                 }
-                className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-400"
               >
-                <option className="dark:text-gray-900" value="all">
-                  All Types
-                </option>
-                <option className="dark:text-gray-900" value="freelancer">
-                  Freelancers
-                </option>
-                <option className="dark:text-gray-900" value="client">
-                  Clients
-                </option>
+                <option value="all">All Types</option>
+                <option value="freelancer">Freelancers</option>
+                <option value="client">Clients</option>
               </select>
             </div>
             <div>
@@ -1192,16 +1186,16 @@ export default function UsersManagement() {
                     e.target.value as "all" | "active" | "banned" | "inactive"
                   )
                 }
-                className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-purple-400"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-purple-400"
                 style={{
                   color:
                     filterStatus === "all"
-                      ? "#9ca3af"
+                      ? "#d1d5db"
                       : filterStatus === "active"
                       ? "#34c759"
                       : filterStatus === "banned"
                       ? "#e11d48"
-                      : "#9ca3af",
+                      : "#d1d5db",
                 }}
               >
                 <option value="all">All Status</option>
@@ -1212,7 +1206,7 @@ export default function UsersManagement() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-purple-600 dark:text-purple-300">
+          <div className="mt-4 flex items-center justify-between text-purple-300">
             <p>
               Showing {currentUsers.length} of {filteredUsers.length} users
             </p>
@@ -1226,12 +1220,12 @@ export default function UsersManagement() {
         </div>
 
         {currentUsers.length === 0 && (
-          <div className="text-center py-12 bg-white dark:bg-gray-800/10 backdrop-blur-lg rounded-2xl border border-gray-200 dark:border-white/20 shadow-lg">
-            <Users className="w-16 h-16 text-purple-600 dark:text-purple-400 mx-auto mb-4" />
-            <p className="text-gray-900 dark:text-white text-xl mb-2">
+          <div className="text-center py-12 bg-gray-800/10 backdrop-blur-lg rounded-2xl border border-white/20 shadow-lg">
+            <Users className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+            <p className="text-white text-xl mb-2">
               No users found
             </p>
-            <p className="text-gray-600 dark:text-purple-300">
+            <p className="text-purple-300">
               Try adjusting your filters or search term
             </p>
           </div>
@@ -1242,9 +1236,9 @@ export default function UsersManagement() {
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="p-2 bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-white" />
+              <ChevronLeft className="w-5 h-5 text-white" />
             </button>
 
             {[...Array(totalPages)].map((_, idx) => {
@@ -1260,7 +1254,7 @@ export default function UsersManagement() {
                     className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
                       currentPage === idx + 1
                         ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                        : "bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 text-gray-700 dark:text-white"
+                        : "bg-white/10 hover:bg-white/20 text-white"
                     }`}
                   >
                     {idx + 1}
@@ -1270,7 +1264,7 @@ export default function UsersManagement() {
                 return (
                   <span
                     key={idx}
-                    className="text-gray-600 dark:text-white px-2"
+                    className="text-white px-2"
                   >
                     ...
                   </span>
@@ -1284,9 +1278,9 @@ export default function UsersManagement() {
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
               }
               disabled={currentPage === totalPages}
-              className="p-2 bg-white dark:bg-white/10 hover:bg-gray-100 dark:hover:bg-white/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronRight className="w-5 h-5 text-gray-600 dark:text-white" />
+              <ChevronRight className="w-5 h-5 text-white" />
             </button>
           </div>
         )}

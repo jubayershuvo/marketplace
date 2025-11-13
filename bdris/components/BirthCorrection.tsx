@@ -1,0 +1,2302 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { countriesList } from "@/json/countries";
+import toast from "react-hot-toast";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Types
+   ──────────────────────────────────────────────────────────────────────────── */
+interface CorrectionInfo {
+  id: string;
+  key: string;
+  value: string;
+  cause: string;
+}
+
+interface Address {
+  country: string;
+  geoId: string;
+  division: string;
+  divisionName: string;
+  district: string;
+  districtName: string;
+  cityCorpCantOrUpazila: string;
+  upazilaName: string;
+  paurasavaOrUnion: string;
+  unionName: string;
+  postOfc: string;
+  postOfcEn: string;
+  vilAreaTownBn: string;
+  vilAreaTownEn: string;
+  houseRoadBn: string;
+  houseRoadEn: string;
+  ward: string;
+  wardName: string;
+}
+
+interface BirthRecord {
+  personNameBn: string;
+  personNameEn: string;
+  motherNameBn: string;
+  motherNameEn: string;
+  fatherNameBn: string;
+  fatherNameEn: string;
+  personDob: string;
+  ubrn: string;
+  registrationOfficeNameBn: string;
+  officeAddressBn: string;
+  divisionId?: string;
+  divisionName?: string;
+  districtId?: string;
+  districtName?: string;
+  upazilaId?: string;
+  upazilaName?: string;
+  unionId?: string;
+  unionName?: string;
+  wardId?: string;
+  wardName?: string;
+  birthAddress?: Address;
+  permAddress?: Address;
+  prsntAddress?: Address;
+}
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  url: string;
+  attachmentTypeId: string;
+  fileType?: string;
+  deleteUrl?: string;
+}
+
+interface FileType {
+  id: string;
+  name: string;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BDRISGeoSelector – Updated to use country selection with address inputs
+   ──────────────────────────────────────────────────────────────────────────── */
+interface GeoLocation {
+  id: string;
+  nameBn: string;
+  nameEn: string;
+  targetGeoOrder?: number;
+  geoLevelId?: number;
+}
+
+interface GeoResponse {
+  geoObject: GeoLocation[];
+  targetGeoOrder?: number;
+}
+
+interface LoadingState {
+  division: boolean;
+  district: boolean;
+  upazila: boolean;
+  union: boolean;
+  ward: boolean;
+}
+
+interface OptionsState {
+  division: GeoLocation[];
+  district: GeoLocation[];
+  upazila: GeoLocation[];
+  union: GeoLocation[];
+  ward: GeoLocation[];
+}
+
+type GeoSelectorProps = {
+  /** Called when the user clicks "প্রয়োগ করুন" */
+  onApply: (addr: Address) => void;
+  /** Optional pre-filled address (used when editing) */
+  initial?: Partial<Address>;
+};
+
+const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
+  const [selected, setSelected] = useState({
+    country: initial?.country || "-1",
+    division: initial?.division || "-1",
+    district: initial?.district || "-1",
+    upazila: initial?.cityCorpCantOrUpazila || "-1",
+    union: initial?.paurasavaOrUnion || "-1",
+    ward: initial?.ward || "-1",
+  });
+
+  const [addressInputs, setAddressInputs] = useState({
+    postOfc: initial?.postOfc || "",
+    postOfcEn: initial?.postOfcEn || "",
+    vilAreaTownBn: initial?.vilAreaTownBn || "",
+    vilAreaTownEn: initial?.vilAreaTownEn || "",
+    houseRoadBn: initial?.houseRoadBn || "",
+    houseRoadEn: initial?.houseRoadEn || "",
+  });
+
+  const [loading, setLoading] = useState<LoadingState>({
+    division: false,
+    district: false,
+    upazila: false,
+    union: false,
+    ward: false,
+  });
+
+  const [options, setOptions] = useState<OptionsState>({
+    division: [],
+    district: [],
+    upazila: [],
+    union: [],
+    ward: [],
+  });
+
+  const [wardLabel, setWardLabel] = useState("ওয়ার্ড");
+
+  const api = "/api/address?ajax=1";
+
+  const refs = {
+    country: useRef<HTMLSelectElement>(null),
+    division: useRef<HTMLSelectElement>(null),
+    district: useRef<HTMLSelectElement>(null),
+    upazila: useRef<HTMLSelectElement>(null),
+    union: useRef<HTMLSelectElement>(null),
+    ward: useRef<HTMLSelectElement>(null),
+  };
+
+  const showLoading = (field: keyof LoadingState, visible: boolean) => {
+    setLoading((p) => ({ ...p, [field]: visible }));
+  };
+
+  const clearSelects = (fields: (keyof OptionsState)[]) => {
+    setOptions((p) => {
+      const n = { ...p };
+      fields.forEach((f) => (n[f] = []));
+      return n;
+    });
+  };
+
+  const buildUrl = (
+    parentId: string,
+    order: string,
+    type: string,
+    ward = false
+  ) => {
+    const w = ward && "&ward=true";
+    return `${api}&parent=${encodeURIComponent(
+      parentId
+    )}&geoGroup=birthPlace&geoOrder=${order}&geoType=${encodeURIComponent(
+      type
+    )}${w}`;
+  };
+
+  const loadGeo = async (
+    target: keyof OptionsState,
+    parentId: string,
+    order: string,
+    type: string,
+    ward = false
+  ): Promise<GeoLocation[]> => {
+    showLoading(target, true);
+    const url = buildUrl(parentId, order, type, ward);
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data: GeoResponse = await r.json();
+      const list = Array.isArray(data.geoObject) ? data.geoObject : [];
+      const safe = list.map((l) => ({
+        ...l,
+        nameBn: (l.nameBn || "").replace(/</g, "&lt;"),
+        nameEn: (l.nameEn || "").replace(/</g, "&lt;"),
+      }));
+      setOptions((p) => ({ ...p, [target]: safe }));
+      return safe;
+    } catch (e) {
+      console.error(e);
+      toast.error("লোড করতে সমস্যা হয়েছে");
+      return [];
+    } finally {
+      showLoading(target, false);
+    }
+  };
+
+  const getParams = (ref: React.RefObject<HTMLSelectElement>) => {
+    const sel = ref.current;
+    if (!sel?.selectedOptions?.[0]) return null;
+    const opt = sel.selectedOptions[0];
+    return {
+      parentId: opt.value,
+      nextOrder: opt.dataset.nextOrder ?? "",
+      nextType: opt.dataset.nextType ?? "",
+      currentType: opt.dataset.currentType ?? "",
+    };
+  };
+
+  // Handle address input changes
+  const handleAddressInputChange = (
+    field: keyof typeof addressInputs,
+    value: string
+  ) => {
+    setAddressInputs((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // ── Handlers ───────────────────────────────────────────────────────────
+  const handleCountry = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setSelected((p) => ({
+      ...p,
+      country: v,
+      division: "",
+      district: "",
+      upazila: "",
+      union: "",
+      ward: "",
+    }));
+    clearSelects(["division", "district", "upazila", "union", "ward"]);
+
+    // Only load divisions if Bangladesh is selected (value "1")
+    if (v === "1") {
+      loadGeo("division", "1", "0", "0");
+    }
+  };
+
+  const handleDivision = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setSelected((p) => ({
+      ...p,
+      division: v,
+      district: "",
+      upazila: "",
+      union: "",
+      ward: "",
+    }));
+    clearSelects(["district", "upazila", "union", "ward"]);
+    if (!v) return;
+    const p = getParams(refs.division as React.RefObject<HTMLSelectElement>);
+    if (!p) return;
+    loadGeo("district", p.parentId, p.nextOrder || "1", p.nextType || "1");
+  };
+
+  const handleDistrict = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setSelected((p) => ({
+      ...p,
+      district: v,
+      upazila: "",
+      union: "",
+      ward: "",
+    }));
+    clearSelects(["upazila", "union", "ward"]);
+    if (!v) return;
+    const p = getParams(refs.district as React.RefObject<HTMLSelectElement>);
+    if (!p) return;
+    loadGeo("upazila", p.parentId, p.nextOrder || "2", p.nextType || "2");
+  };
+
+  const handleUpazila = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setSelected((p) => ({ ...p, upazila: v, union: "", ward: "" }));
+    clearSelects(["union", "ward"]);
+    if (!v) return;
+    const p = getParams(refs.upazila as React.RefObject<HTMLSelectElement>);
+    if (!p) return;
+    const upazilaId = p.parentId;
+    showLoading("union", true);
+    Promise.all([
+      fetch(buildUrl(upazilaId, "3", "8"))
+        .then((r) => r.json())
+        .catch(() => ({ geoObject: [] })),
+      fetch(buildUrl(upazilaId, "3", "7", true))
+        .then((r) => r.json())
+        .catch(() => ({ geoObject: [] })),
+      fetch(buildUrl(upazilaId, "3", "3"))
+        .then((r) => r.json())
+        .catch(() => ({ geoObject: [] })),
+    ])
+      .then(([city, canton, union]) => {
+        const all: GeoLocation[] = [];
+        [city, canton, union].forEach((d) => {
+          const list = (d as GeoResponse).geoObject || [];
+          list.forEach((l) =>
+            all.push({
+              ...l,
+              nameBn: (l.nameBn || "").replace(/</g, "&lt;"),
+              nameEn: (l.nameEn || "").replace(/</g, "&lt;"),
+            })
+          );
+        });
+        setOptions((prev) => ({ ...prev, union: all }));
+        showLoading("union", false);
+      })
+      .catch(() => showLoading("union", false));
+  };
+
+  const handleUnion = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setSelected((p) => ({ ...p, union: v, ward: "" }));
+    clearSelects(["ward"]);
+    if (!v) return;
+    const p = getParams(refs.union as React.RefObject<HTMLSelectElement>);
+    if (!p) return;
+    const unionType = p.currentType;
+    setWardLabel(
+      unionType === "7"
+        ? "ওয়ার্ড (ক্যান্টনমেন্ট)"
+        : unionType === "8"
+        ? "ওয়ার্ড (সিটি)"
+        : "ওয়ার্ড"
+    );
+    let wardType = "5";
+    if (unionType === "8") wardType = "9";
+    else if (unionType === "7") wardType = "6";
+    loadGeo("ward", p.parentId, "4", wardType, true);
+  };
+
+  const handleWard = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelected((p) => ({ ...p, ward: e.target.value }));
+  };
+
+  const buildAddress = (): Address | null => {
+    const getCountry = () => {
+      const country = countriesList.find((c) => c.id === selected.country);
+      return country || null;
+    };
+
+    const get = (field: keyof typeof selected) => {
+      const id = selected[field];
+      if (!id) return null;
+      const list = options[field as keyof OptionsState] as GeoLocation[];
+
+      return (
+        list.find((i) => {
+          return i.id.toString() === id.toString();
+        }) ?? null
+      );
+    };
+
+    const country = getCountry();
+    const div = get("division");
+    const dis = get("district");
+    const upa = get("upazila");
+    const uni = get("union");
+    const wrd = get("ward");
+
+    if (!country || country.id === "-1") {
+      console.log("Country not selected or invalid");
+      return null;
+    }
+
+    // For Bangladesh, require all geographic levels
+    if (country.id === "1") {
+      if (!div || !dis || !upa || !uni) {
+        console.log("Missing Bangladesh geographic levels:", {
+          div,
+          dis,
+          upa,
+          uni,
+        });
+        return null;
+      }
+    }
+
+    // For non-Bangladesh countries, require at least address fields
+    if (country.id !== "1") {
+      if (
+        !addressInputs.vilAreaTownBn.trim() &&
+        !addressInputs.vilAreaTownEn.trim()
+      ) {
+        console.log("Missing address fields for non-Bangladesh country");
+        return null;
+      }
+    }
+
+    return {
+      country: country.id,
+      geoId: country.geoId,
+      division: div?.id || "-1",
+      divisionName: div?.nameBn || "",
+      district: dis?.id || "-1",
+      districtName: dis?.nameBn || "",
+      cityCorpCantOrUpazila: upa?.id || "-1",
+      upazilaName: upa?.nameBn || "",
+      paurasavaOrUnion: uni?.id || "-1",
+      unionName: uni?.nameBn || "",
+      postOfc: addressInputs.postOfc || "",
+      postOfcEn: addressInputs.postOfcEn || "",
+      vilAreaTownBn: addressInputs.vilAreaTownBn || "",
+      vilAreaTownEn: addressInputs.vilAreaTownEn || "",
+      houseRoadBn: addressInputs.houseRoadBn || "",
+      houseRoadEn: addressInputs.houseRoadEn || "",
+      ward: wrd?.id ?? "-1",
+      wardName: wrd?.nameBn ?? "",
+    };
+  };
+
+  const apply = () => {
+    const addr = buildAddress();
+
+    if (addr) {
+      onApply(addr);
+    } else {
+      // Show specific error messages
+      if (!selected.country || selected.country === "-1") {
+        toast.error("দয়া করে একটি দেশ নির্বাচন করুন");
+      } else if (selected.country === "1") {
+        if (!selected.division) toast.error("দয়া করে বিভাগ নির্বাচন করুন");
+        else if (!selected.district) toast.error("দয়া করে জেলা নির্বাচন করুন");
+        else if (!selected.upazila)
+          toast.error("দয়া করে উপজেলা নির্বাচন করুন");
+        else if (!selected.union) toast.error("দয়া করে ইউনিয়ন নির্বাচন করুন");
+      } else {
+        if (
+          !addressInputs.vilAreaTownBn.trim() &&
+          !addressInputs.vilAreaTownEn.trim()
+        ) {
+          toast.error("দয়া করে ঠিকানা লিখুন (বাংলা বা ইংরেজিতে)");
+        }
+      }
+    }
+  };
+
+  // ── Pre-fill when editing ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!initial) return;
+
+    // Load divisions if Bangladesh is selected
+    if (initial.country === "1") {
+      loadGeo("division", "1", "0", "0").then(() => {
+        // After divisions are loaded, load subsequent levels
+        if (initial.division) {
+          loadGeo("district", initial.division, "1", "1").then(() => {
+            if (initial.district) {
+              loadGeo("upazila", initial.district, "2", "2").then(() => {
+                if (initial.cityCorpCantOrUpazila) {
+                  const upazilaId = initial.cityCorpCantOrUpazila;
+                  showLoading("union", true);
+                  Promise.all([
+                    fetch(buildUrl(upazilaId, "3", "8"))
+                      .then((r) => r.json())
+                      .catch(() => ({ geoObject: [] })),
+                    fetch(buildUrl(upazilaId, "3", "7", true))
+                      .then((r) => r.json())
+                      .catch(() => ({ geoObject: [] })),
+                    fetch(buildUrl(upazilaId, "3", "3"))
+                      .then((r) => r.json())
+                      .catch(() => ({ geoObject: [] })),
+                  ])
+                    .then(([city, canton, union]) => {
+                      const all: GeoLocation[] = [];
+                      [city, canton, union].forEach((d) => {
+                        const list = (d as GeoResponse).geoObject || [];
+                        list.forEach((l) =>
+                          all.push({
+                            ...l,
+                            nameBn: (l.nameBn || "").replace(/</g, "&lt;"),
+                            nameEn: (l.nameEn || "").replace(/</g, "&lt;"),
+                          })
+                        );
+                      });
+                      setOptions((prev) => ({ ...prev, union: all }));
+                      showLoading("union", false);
+
+                      // After unions are loaded, load wards if needed
+                      if (initial.paurasavaOrUnion) {
+                        const unionType = all
+                          .find((u) => u.id === initial.paurasavaOrUnion)
+                          ?.geoLevelId?.toString();
+                        if (unionType) {
+                          setWardLabel(
+                            unionType === "7"
+                              ? "ওয়ার্ড (ক্যান্টনমেন্ট)"
+                              : unionType === "8"
+                              ? "ওয়ার্ড (সিটি)"
+                              : "ওয়ার্ড"
+                          );
+                          let wardType = "5";
+                          if (unionType === "8") wardType = "9";
+                          else if (unionType === "7") wardType = "6";
+                          loadGeo(
+                            "ward",
+                            initial.paurasavaOrUnion!,
+                            "4",
+                            wardType,
+                            true
+                          );
+                        }
+                      }
+                    })
+                    .catch(() => showLoading("union", false));
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [initial]);
+
+  // ── Render helper ───────────────────────────────────────────────────────
+  const renderSelect = (
+    id: string,
+    label: string,
+    value: string,
+    list: GeoLocation[],
+    loading: boolean,
+    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void,
+    ref?: React.RefObject<HTMLSelectElement>,
+    includeMeta = true
+  ) => (
+    <div className="space-y-1">
+      <label
+        htmlFor={id}
+        className="block font-medium text-gray-700 dark:text-gray-300"
+      >
+        {label}
+      </label>
+      <select
+        id={id}
+        ref={ref}
+        value={value}
+        onChange={onChange}
+        className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+      >
+        <option value="-1">-- নির্বাচন করুন --</option>
+        {list.map((item, index) => {
+          if (!includeMeta)
+            return (
+              <option key={`${id}-${item.id}-${index}`} value={item.id}>
+                {item.nameBn}
+              </option>
+            );
+
+          const nextOrder = item.targetGeoOrder?.toString() ?? "";
+          const nextType = item.geoLevelId?.toString() ?? "";
+          const curType = item.geoLevelId?.toString() ?? "";
+
+          return (
+            <option
+              key={`${id}-${item.id}-${index}`}
+              value={item.id}
+              data-next-order={nextOrder}
+              data-next-type={nextType}
+              data-current-type={curType}
+            >
+              {item.nameBn}
+            </option>
+          );
+        })}
+      </select>
+      {loading && (
+        <p className="text-sm text-blue-600 dark:text-blue-400">লোড হচ্ছে...</p>
+      )}
+    </div>
+  );
+
+  // Render address input fields
+  const renderAddressInputs = () => (
+    <div className="space-y-4 mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded">
+      <h4 className="font-semibold text-gray-800 dark:text-gray-200">
+        অতিরিক্ত ঠিকানা তথ্য
+      </h4>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ডাকঘর (বাংলায়) */}
+        <div>
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
+            ডাকঘর (বাংলায়)
+          </label>
+          <input
+            type="text"
+            value={addressInputs.postOfc}
+            onChange={(e) =>
+              handleAddressInputChange("postOfc", e.target.value)
+            }
+            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="ডাকঘরের নাম বাংলায়"
+          />
+        </div>
+
+        {/* ডাকঘর (ইংরেজিতে) */}
+        <div>
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
+            ডাকঘর (ইংরেজিতে)
+          </label>
+          <input
+            type="text"
+            value={addressInputs.postOfcEn}
+            onChange={(e) =>
+              handleAddressInputChange("postOfcEn", e.target.value)
+            }
+            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Post Office Name in English"
+          />
+        </div>
+
+        {/* গ্রাম / পাড়া / মহল্লা */}
+        <div>
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
+            গ্রাম / পাড়া / মহল্লা *
+          </label>
+          <textarea
+            value={addressInputs.vilAreaTownBn}
+            onChange={(e) =>
+              handleAddressInputChange("vilAreaTownBn", e.target.value)
+            }
+            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="গ্রাম/পাড়া/মহল্লার নাম বাংলায়"
+            rows={3}
+            required={selected.country !== "1"}
+          />
+        </div>
+
+        {/* গ্রাম / পাড়া / মহল্লা (ইংরেজি) */}
+        <div>
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
+            গ্রাম / পাড়া / মহল্লা (ইংরেজি) *
+          </label>
+          <textarea
+            value={addressInputs.vilAreaTownEn}
+            onChange={(e) =>
+              handleAddressInputChange("vilAreaTownEn", e.target.value)
+            }
+            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Village/Area/Town in English"
+            rows={3}
+            required={selected.country !== "1"}
+          />
+        </div>
+
+        {/* বাসা ও সড়ক (নাম, নম্বর) */}
+        <div>
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
+            বাসা ও সড়ক (নাম, নম্বর)
+          </label>
+          <textarea
+            value={addressInputs.houseRoadBn}
+            onChange={(e) =>
+              handleAddressInputChange("houseRoadBn", e.target.value)
+            }
+            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="বাসা ও সড়কের বিবরণ বাংলায়"
+            rows={3}
+          />
+        </div>
+
+        {/* বাসা ও সড়ক (নাম, নম্বর) (ইংরেজি) */}
+        <div>
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
+            বাসা ও সড়ক (নাম, নম্বর) (ইংরেজি)
+          </label>
+          <textarea
+            value={addressInputs.houseRoadEn}
+            onChange={(e) =>
+              handleAddressInputChange("houseRoadEn", e.target.value)
+            }
+            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="House and Road details in English"
+            rows={3}
+          />
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+        * চিহ্নিত ফিল্ডগুলি আবশ্যক
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Country Selection */}
+      {renderSelect(
+        "country",
+        "দেশ *",
+        selected.country,
+        countriesList,
+        false,
+        handleCountry,
+        refs.country as React.RefObject<HTMLSelectElement>,
+        false
+      )}
+
+      {/* Bangladesh Specific Geographic Selectors */}
+      {selected.country === "1" && (
+        <>
+          {renderSelect(
+            "division",
+            "বিভাগ *",
+            selected.division,
+            options.division,
+            loading.division,
+            handleDivision,
+            refs.division as React.RefObject<HTMLSelectElement>
+          )}
+
+          {selected.division &&
+            renderSelect(
+              "district",
+              "জেলা *",
+              selected.district,
+              options.district,
+              loading.district,
+              handleDistrict,
+              refs.district as React.RefObject<HTMLSelectElement>
+            )}
+
+          {selected.district &&
+            renderSelect(
+              "upazila",
+              "উপজেলা/সিটি কর্পোরেশন *",
+              selected.upazila,
+              options.upazila,
+              loading.upazila,
+              handleUpazila,
+              refs.upazila as React.RefObject<HTMLSelectElement>
+            )}
+
+          {selected.upazila && (
+            <>
+              <label className="block font-medium text-gray-700 dark:text-gray-300">
+                ইউনিয়ন / পৌরসভা / ক্যান্টনমেন্ট *
+              </label>
+              <select
+                id="union"
+                ref={refs.union}
+                value={selected.union}
+                onChange={handleUnion}
+                className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="-1">-- নির্বাচন করুন --</option>
+                {options.union.map((loc, index) => {
+                  const nextOrder = "4";
+                  let nextType = "5";
+                  let curType = "3";
+                  if (loc.geoLevelId === 8) {
+                    nextType = "9";
+                    curType = "8";
+                  } else if (loc.geoLevelId === 7) {
+                    nextType = "6";
+                    curType = "7";
+                  }
+                  return (
+                    <option
+                      key={`union-${loc.id}-${index}`}
+                      value={loc.id}
+                      data-next-order={nextOrder}
+                      data-next-type={nextType}
+                      data-current-type={curType}
+                    >
+                      {loc.nameBn}
+                    </option>
+                  );
+                })}
+              </select>
+              {loading.union && (
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  লোড হচ্ছে...
+                </p>
+              )}
+            </>
+          )}
+
+          {selected.union && (
+            <>
+              {renderSelect(
+                "ward",
+                wardLabel,
+                selected.ward,
+                options.ward,
+                loading.ward,
+                handleWard,
+                refs.ward as React.RefObject<HTMLSelectElement>,
+                false
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Address Input Fields for all countries */}
+      {(selected.country === "1" ||
+        (selected.country &&
+          selected.country !== "1" &&
+          selected.country !== "-1")) &&
+        renderAddressInputs()}
+
+      <div className="flex justify-end gap-3 pt-4">
+        <button
+          type="button"
+          onClick={apply}
+          className="rounded cursor-pointer bg-blue-600 px-5 py-2 text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+        >
+          প্রয়োগ করুন
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MAIN FORM COMPONENT
+  
+   ──────────────────────────────────────────────────────────────────────────── */
+
+interface IData {
+  cookies: string[];
+  url: string;
+  csrf: string;
+  captcha: { src: string };
+}
+export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
+  /* ── Basic states ─────────────────────────────────────────────────────── */
+  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [correctionInfos, setCorrectionInfos] = useState<CorrectionInfo[]>([
+    { id: "1", key: "", value: "", cause: "2" },
+  ]);
+
+  const [data, setData] = useState<IData>(InitData);
+
+  // Enhanced address states with better initialization
+  const [addresses, setAddresses] = useState<{
+    birthPlace: Address;
+    permAddress: Address;
+    prsntAddress: Address;
+  }>({
+    birthPlace: createEmptyAddress(),
+    permAddress: createEmptyAddress(),
+    prsntAddress: createEmptyAddress(),
+  });
+
+  const [formData, setFormData] = useState({
+    ubrn: "20010628309028592",
+    dob: "01/03/2001",
+    captcha: "",
+    relationWithApplicant: "SELF",
+    applicantName: "",
+    email: "",
+    phone: "",
+    otp: "",
+    copyBirthPlaceToPermAddr: false,
+    copyBirthPlaceToPrsntAddr: false,
+  });
+
+  const [birthRecord, setBirthRecord] = useState<BirthRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<
+    { file: File; fileTypeId: string }[]
+  >([]);
+  const [fileTypes] = useState<FileType[]>([
+  {"id": "1", "name": "পিতার জন্ম নিবন্ধন সনদ"},
+  {"id": "2", "name": "মাতার জন্ম নিবন্ধন সনদ"},
+  {"id": "3", "name": "পিতার জাতীয় পরিচয়পত্র"},
+  {"id": "4", "name": "মাতার জাতীয় পরিচয়পত্র"},
+  {"id": "5", "name": "ই পি আই কার্ড"},
+  {"id": "6", "name": "স্থায়ী ঠিকানার প্রমাণ"},
+  {"id": "7", "name": "বর্তমান ঠিকানার প্রমাণ"},
+  {"id": "8", "name": "পিতার পাসপোর্টের স্ক্যান করা কপি"},
+  {"id": "9", "name": "মাতার পাসপোর্টের স্ক্যান করা কপি"},
+  {"id": "10", "name": "পিতার পাসপোর্ট সাইজের ছবি"},
+  {"id": "11", "name": "মাতার পাসপোর্ট সাইজের ছবি"},
+  {"id": "12", "name": "নিবন্ধনাধীন ব্যক্তির পাসপোর্ট সাইজের ছবি"},
+  {"id": "13", "name": "নিবন্ধনাধীন ব্যক্তির এস এস সি সার্টিফিকেটের স্ক্যান করা কপি"},
+  {"id": "14", "name": "পিতার মৃত্যুর প্রমাণ"},
+  {"id": "15", "name": "মাতার মৃত্যুর প্রমাণ"},
+  {"id": "16", "name": "নিবন্ধনাধীন ব্যাক্তির জাতীয় পরিচয়পত্র"},
+  {"id": "44", "name": "ইস্যু সম্পর্কিত ফাইল"},
+  {"id": "17", "name": "প্রাথমিক স্কুল সার্টিফিকেট (পিএসসি)"},
+  {"id": "45", "name": "অঙ্গীকারনামা"},
+  {"id": "46", "name": "নিবন্ধকের প্রত্যয়নপত্র"},
+  {"id": "47", "name": "হাতে লিখা বইয়ের সংশ্লিষ্ট পৃষ্ঠার সত্যায়িত কপি"},
+  {"id": "18", "name": "জুনিয়র স্কুল সার্টিফিকেট (জেএসসি)"},
+  {"id": "48", "name": "হাতে লিখা সনদের কপি"},
+  {"id": "20", "name": "চিকিৎসা প্রতিষ্ঠানের ছাড়পত্র বা চিকিৎসা প্রতিষ্ঠান প্রদত্ত জন্ম সংক্রান্ত সনদের সত্যায়িত কপি বা পূরণকৃ্ত আবেদনপত্রে বার্থ এটেন্ডের এর প্রত্যায়ন বা ইপিআই কার্ডের সত্যায়িত অনুলিপি"},
+  {"id": "21", "name": "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)"},
+  {"id": "22", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
+  {"id": "23", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
+  {"id": "30", "name": "চিকিৎসা প্রতিষ্ঠানের ছাড়পত্র বা চিকিৎসা প্রতিষ্ঠান প্রদত্ত জন্ম সংক্রান্ত সনদের সত্যায়িত কপি বা পূরণকৃ্ত আবেদনপত্রে বার্থ এটেন্ডের এর প্রত্যায়ন বা ইপিআই কার্ডের সত্যায়িত অনুলিপি ।"},
+  {"id": "31", "name": "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)"},
+  {"id": "32", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
+  {"id": "33", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
+  {"id": "40", "name": "চিকিৎসক কর্তৃক প্রত্যায়ন পত্র (বাংলাদেশ মেডিক্যাল এন্ড ডেন্টাল কাউন্সিল কর্তৃক স্বীকৃত এমবিবিএস বা তদূর্ধ্ব ডিগ্রিধারী) বা সরকার কর্তৃক পরিচালিত প্রথমিক শিক্ষা সমাপনী, জুনিয়র স্কুল সার্টিফিকেট এবং শিক্ষা বোর্ড কর্তৃক পরিচালিত মাধ্যমিক স্কুল সার্টিফিকেট"},
+  {"id": "41", "name": "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)"},
+  {"id": "42", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
+  {"id": "43", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ"}
+]);
+  const [currectionList] = useState<FileType[]>([
+    {
+      id: "personBirthDate",
+      name: "জন্ম তারিখ (খ্রিঃ)",
+    },
+    {
+      id: "thChild",
+      name: "পিতা ও মাতার কততম সন্তান",
+    },
+    {
+      id: "gender",
+      name: "লিঙ্গ",
+    },
+    {
+      id: "fatherNameBn",
+      name: "পিতার নাম (বাংলা)",
+    },
+    {
+      id: "motherNameBn",
+      name: "মাতার নাম (বাংলা)",
+    },
+    {
+      id: "fatherNameEn",
+      name: "পিতার নাম (ইংরেজি)",
+    },
+    {
+      id: "motherNameEn",
+      name: "মাতার নাম (ইংরেজি)",
+    },
+    {
+      id: "personFirstNameBn",
+      name: "নামের প্রথম অংশ বাংলায়",
+    },
+    {
+      id: "personLastNameBn",
+      name: "নামের শেষ অংশ বাংলায়",
+    },
+    {
+      id: "personFirstNameEn",
+      name: "নামের প্রথম অংশ ইংরেজি",
+    },
+    {
+      id: "personLastNameEn",
+      name: "নামের শেষ অংশ ইংরেজি",
+    },
+    {
+      id: "personNationality",
+      name: "জাতীয়তা",
+    },
+    {
+      id: "personNid",
+      name: "এন আই ডি",
+    },
+    {
+      id: "passportNumber",
+      name: "পাসপোর্ট নাম্বার",
+    },
+    {
+      id: "fatherNationality",
+      name: "পিতার জাতীয়তা",
+    },
+    {
+      id: "motherNationality",
+      name: "মাতার জাতীয়তা",
+    },
+  ]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* ── Address modal ─────────────────────────────────────────────────────── */
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [currentAddressType, setCurrentAddressType] = useState<
+    "birthPlace" | "permAddress" | "prsntAddress"
+  >("birthPlace");
+
+  // Helper function to create empty address
+  function createEmptyAddress(): Address {
+    return {
+      country: "-1", // Default to "select country"
+      geoId: "",
+      division: "-1",
+      divisionName: "",
+      district: "-1",
+      districtName: "",
+      cityCorpCantOrUpazila: "-1",
+      upazilaName: "",
+      paurasavaOrUnion: "-1",
+      unionName: "",
+      postOfc: "",
+      postOfcEn: "",
+      vilAreaTownBn: "",
+      vilAreaTownEn: "",
+      houseRoadBn: "",
+      houseRoadEn: "",
+      ward: "-1",
+      wardName: "",
+    };
+  }
+
+  // Enhanced address modal handlers
+  const openAddressModal = (type: typeof currentAddressType) => {
+    setCurrentAddressType(type);
+    setShowAddressModal(true);
+  };
+
+  const closeAddressModal = () => {
+    setShowAddressModal(false);
+  };
+
+  const applyAddressFromSelector = (addr: Address) => {
+    setAddresses((prev) => ({
+      ...prev,
+      [currentAddressType]: addr,
+    }));
+    toast.success("ঠিকানা সফলভাবে প্রয়োগ করা হয়েছে");
+    closeAddressModal();
+  };
+
+  // Handle checkbox changes to ALWAYS copy from birthPlace when checked, and remove address when unchecked
+  const handleCheckboxChange = (
+    field: keyof typeof formData,
+    checked: boolean
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: checked }));
+
+    if (checked) {
+      if (field === "copyBirthPlaceToPermAddr") {
+        // ALWAYS copy from birthPlace to permAddress
+        setAddresses((prev) => ({
+          ...prev,
+          permAddress: { ...prev.birthPlace },
+        }));
+        toast.success("জন্মস্থানের ঠিকানা স্থায়ী ঠিকানায় কপি করা হয়েছে");
+      } else if (field === "copyBirthPlaceToPrsntAddr") {
+        // ALWAYS copy from birthPlace to prsntAddress (not from permAddress)
+        setAddresses((prev) => ({
+          ...prev,
+          prsntAddress: { ...prev.birthPlace },
+        }));
+        toast.success("জন্মস্থানের ঠিকানা বর্তমান ঠিকানায় কপি করা হয়েছে");
+      }
+    } else {
+      // Remove address when unchecked
+      if (field === "copyBirthPlaceToPermAddr") {
+        setAddresses((prev) => ({
+          ...prev,
+          permAddress: createEmptyAddress(),
+        }));
+        toast.success("স্থায়ী ঠিকানা সরানো হয়েছে");
+      } else if (field === "copyBirthPlaceToPrsntAddr") {
+        setAddresses((prev) => ({
+          ...prev,
+          prsntAddress: createEmptyAddress(),
+        }));
+        toast.success("বর্তমান ঠিকানা সরানো হয়েছে");
+      }
+    }
+  };
+
+  // Clear address function for all address types
+  const clearAddress = (type: keyof typeof addresses) => {
+    setAddresses((prev) => ({
+      ...prev,
+      [type]: createEmptyAddress(),
+    }));
+    toast.success(`${getAddressTypeLabel(type)} সাফ করা হয়েছে`);
+
+    // Also uncheck checkboxes if clearing addresses
+    if (type === "permAddress") {
+      setFormData((prev) => ({ ...prev, copyBirthPlaceToPermAddr: false }));
+    } else if (type === "prsntAddress") {
+      setFormData((prev) => ({ ...prev, copyBirthPlaceToPrsntAddr: false }));
+    }
+  };
+
+  const getAddressTypeLabel = (type: keyof typeof addresses): string => {
+    const labels = {
+      birthPlace: "জন্মস্থানের ঠিকানা",
+      permAddress: "স্থায়ী ঠিকানা",
+      prsntAddress: "বর্তমান ঠিকানা",
+    };
+    return labels[type];
+  };
+
+  const getCountryName = (countryCode: string): string => {
+    const country = countriesList.find((c) => c.id === countryCode);
+    return country?.nameBn || "নির্বাচন করা হয়নি";
+  };
+
+  // Enhanced address display component with clear button
+  const AddressDisplay = ({
+    address,
+    type,
+    onEdit,
+  }: {
+    address: Address;
+    type: keyof typeof addresses;
+    onEdit: () => void;
+  }) => (
+    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-700">
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-gray-800 dark:text-gray-200">
+          {getAddressTypeLabel(type)}
+        </h4>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+          >
+            সম্পাদনা
+          </button>
+          <button
+            type="button"
+            onClick={() => clearAddress(type)}
+            className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+          >
+            সাফ করুন
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+        <div className="md:col-span-2">
+          <span className="font-medium text-gray-700 dark:text-gray-300">
+            দেশ:
+          </span>{" "}
+          <span className="text-gray-900 dark:text-gray-100">
+            {getCountryName(address.country)}
+          </span>
+        </div>
+
+        {address.country === "1" && (
+          <>
+            {address.divisionName && (
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  বিভাগ:
+                </span>{" "}
+                <span className="text-gray-900 dark:text-gray-100">
+                  {address.divisionName}
+                </span>
+              </div>
+            )}
+            {address.districtName && (
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  জেলা:
+                </span>{" "}
+                <span className="text-gray-900 dark:text-gray-100">
+                  {address.districtName}
+                </span>
+              </div>
+            )}
+            {address.upazilaName && (
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  উপজেলা:
+                </span>{" "}
+                <span className="text-gray-900 dark:text-gray-100">
+                  {address.upazilaName}
+                </span>
+              </div>
+            )}
+            {address.unionName && (
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  ইউনিয়ন:
+                </span>{" "}
+                <span className="text-gray-900 dark:text-gray-100">
+                  {address.unionName}
+                </span>
+              </div>
+            )}
+            {address.wardName && (
+              <div>
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  ওয়ার্ড:
+                </span>{" "}
+                <span className="text-gray-900 dark:text-gray-100">
+                  {address.wardName}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+
+        {address.postOfc && (
+          <div>
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              ডাকঘর:
+            </span>{" "}
+            <span className="text-gray-900 dark:text-gray-100">
+              {address.postOfc}
+            </span>
+          </div>
+        )}
+
+        {address.vilAreaTownBn && (
+          <div className="md:col-span-2">
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              গ্রাম/পাড়া:
+            </span>{" "}
+            <span className="text-gray-900 dark:text-gray-100">
+              {address.vilAreaTownBn}
+            </span>
+          </div>
+        )}
+
+        {address.houseRoadBn && (
+          <div className="md:col-span-2">
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              বাসা ও সড়ক:
+            </span>{" "}
+            <span className="text-gray-900 dark:text-gray-100">
+              {address.houseRoadBn}
+            </span>
+          </div>
+        )}
+
+        {address.country === "-1" && (
+          <div className="md:col-span-2 text-gray-500 dark:text-gray-400">
+            ঠিকানা নির্বাচন করা হয়নি
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Enhanced UBRN search with address pre-fill
+  const searchByUbrn = async () => {
+    if (!formData.ubrn || !formData.dob || !formData.captcha) {
+      toast.error("সকল প্রয়োজনীয় ক্ষেত্র পূরণ করুন");
+      return;
+    }
+
+    setIsLoading(true);
+    const loadingToast = toast.loading("অনুসন্ধান করা হচ্ছে...");
+
+    try {
+      const res = await fetch("/api/get-data-by-ubrn", {
+        method: "POST",
+        body: JSON.stringify({
+          ubrn: formData.ubrn,
+          dob: formData.dob,
+          captcha: formData.captcha,
+          data,
+        }),
+      });
+      const userData = await res.json();
+      setBirthRecord(userData.data);
+
+      if (userData.error) {
+        toast.error(userData.error);
+        return;
+      }
+
+      // Pre-fill addresses from API response if available
+      if (userData.data) {
+        const newAddresses = { ...addresses };
+
+        if (userData.data.birthAddress) {
+          newAddresses.birthPlace = {
+            ...createEmptyAddress(),
+            ...userData.data.birthAddress,
+          };
+        }
+
+        if (userData.data.permAddress) {
+          newAddresses.permAddress = {
+            ...createEmptyAddress(),
+            ...userData.data.permAddress,
+          };
+        }
+
+        if (userData.data.prsntAddress) {
+          newAddresses.prsntAddress = {
+            ...createEmptyAddress(),
+            ...userData.data.prsntAddress,
+          };
+        }
+
+        setAddresses(newAddresses);
+      }
+
+      toast.success("তথ্য পাওয়া গেছে এবং ঠিকানা লোড করা হয়েছে");
+    } catch (e) {
+      console.log(e)
+      toast.error("অনুসন্ধান ব্যর্থ");
+    } finally {
+      setIsLoading(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
+  /* ── File upload helpers (mock) ──────────────────────────────────────── */
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const valid = files.filter(
+      (f) =>
+        ["image/jpeg", "image/jpg", "image/png", "application/pdf"].includes(
+          f.type
+        ) && f.size <= 2 * 1024 * 1024
+    );
+
+    if (files.length !== valid.length) {
+      toast.error("কিছু ফাইল অবৈধ (শুধুমাত্র JPG, PNG, PDF এবং সর্বোচ্চ 2MB)");
+    }
+
+    setUploadingFiles((p) => [
+      ...p,
+      ...valid.map((f) => ({ file: f, fileTypeId: "-1" })),
+    ]);
+  };
+
+  const updateUploadingFileType = (idx: number, typeId: string) => {
+    setUploadingFiles((p) =>
+      p.map((it, i) => (i === idx ? { ...it, fileTypeId: typeId } : it))
+    );
+  };
+
+  const removeUploadingFile = (idx: number) =>
+    setUploadingFiles((p) => p.filter((_, i) => i !== idx));
+
+  const uploadFile = async (file: File, typeId: string) => {
+    const formData = new FormData();
+    formData.append("attachmentType", typeId);
+    formData.append("attachmentSubType", "-1");
+    formData.append("files", file, file.name);
+    formData.append("csrf", data.csrf);
+    formData.append("cookies", data.cookies.join("; "));
+
+    const loadingToast = toast.loading(`ফাইল আপলোড হচ্ছে: ${file.name}`);
+
+    try {
+      const res = await fetch("/api/upload_doc", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      console.log(data);
+
+      toast.dismiss(loadingToast);
+      toast.success(`ফাইল আপলোড সফল: ${file.name}`);
+
+      return {
+        id: data.data[0].id,
+        name: file.name,
+        url: data.data[0].url,
+        deleteUrl: data.data[0].deleteUrl,
+        attachmentTypeId: typeId,
+        fileType: fileTypes.find((t) => t.id === typeId)?.name,
+      };
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      const errMsg =
+        error instanceof Error ? error.message : "অনুসন্ধান ব্যর্থ";
+      toast.error(`ফাইল আপলোড ব্যর্থ: ${errMsg}`);
+    }
+  };
+
+  const handleFileUpload = async (idx: number) => {
+    const item = uploadingFiles[idx];
+    if (!item || item.fileTypeId === "-1") {
+      toast.error("ফাইল টাইপ নির্বাচন করুন");
+      return;
+    }
+    try {
+      const uploaded = await uploadFile(item.file, item.fileTypeId);
+      if (!uploaded) return;
+      setUploadedFiles((p) => [...p, uploaded]);
+      setUploadingFiles((p) => p.filter((_, i) => i !== idx));
+    } catch (error) {
+      console.log(error)
+    }
+  };
+
+  /* ── Correction helpers ──────────────────────────────────────────────── */
+  const addCorrectionInfo = () => {
+    if (correctionInfos.length < 3) {
+      setCorrectionInfos((p) => [
+        ...p,
+        { id: Date.now().toString(), key: "", value: "", cause: "" },
+      ]);
+      toast.success("নতুন সংশোধিত তথ্য যোগ করা হয়েছে");
+    } else {
+      toast.error("সর্বোচ্চ ৩টি সংশোধিত তথ্য যোগ করা যাবে");
+    }
+  };
+
+  const removeCorrectionInfo = (id: string) => {
+    if (correctionInfos.length > 0) {
+      setCorrectionInfos((p) => p.filter((i) => i.id !== id));
+      toast.success("সংশোধিত তথ্য মুছে ফেলা হয়েছে");
+    }
+  };
+
+  const updateCorrectionInfo = (
+    id: string,
+    field: keyof CorrectionInfo,
+    value: string
+  ) => {
+    setCorrectionInfos((p) =>
+      p.map((i) => (i.id === id ? { ...i, [field]: value } : i))
+    );
+  };
+
+  /* ── Input change ─────────────────────────────────────────────────────── */
+  const handleInputChange = (
+    field: keyof typeof formData,
+    value: string | boolean
+  ) => {
+    if (
+      field === "copyBirthPlaceToPermAddr" ||
+      field === "copyBirthPlaceToPrsntAddr"
+    ) {
+      handleCheckboxChange(field, value as boolean);
+    } else {
+      setFormData((p) => ({ ...p, [field]: value }));
+    }
+  };
+
+  /* ── Submit (mock) ───────────────────────────────────────────────────── */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!birthRecord) {
+      toast.error("প্রথমে UBRN অনুসন্ধান করুন");
+      return;
+    }
+    if (!formData.otp) {
+      toast.error("OTP যাচাই করুন");
+      return;
+    }
+    if (!formData.phone) {
+      toast.error("দয়া করে মোবাইল নম্বর পূরণ করুন");
+      return;
+    }
+
+    // const validateMobile = (mobile: string) => {
+    //   const regex = /^0[0-9]{11}$/;
+    //   return regex.test(mobile);
+    // };
+
+    // if (!validateMobile(formData.phone)) {
+    //   toast.error("মোবাইল নম্বর সঠিকভাবে পূরণ করুন (01 দিয়ে শুরু করে 11 সংখ্যা)");
+    //   return;
+    // }
+
+    // Validate that at least one correction info is filled
+    // const hasValidCorrection = correctionInfos.some(
+    //   (info) => info.key && info.value && info.cause
+    // );
+
+    // if (!hasValidCorrection) {
+    //   toast.error("দয়া করে কমপক্ষে একটি সংশোধিত তথ্য যোগ করুন");
+    //   return;
+    // }
+
+    // Validate addresses
+    // if (addresses.birthPlace.country === "-1") {
+    //   toast.error("দয়া করে জন্মস্থানের ঠিকানা নির্বাচন করুন");
+    //   return;
+    // }
+    // if (addresses.permAddress.country === "-1") {
+    //   toast.error("দয়া করে স্থায়ী ঠিকানা নির্বাচন করুন");
+    //   return;
+    // }
+    // if (addresses.prsntAddress.country === "-1") {
+    //   toast.error("দয়া করে বর্তমান ঠিকানা নির্বাচন করুন");
+    //   return;
+    // }
+
+    setIsLoading(true);
+    const loadingToast = toast.loading("আবেদন জমা হচ্ছে...");
+
+    // Prepare data for API submission
+    const submissionData = {
+      ubrn: formData.ubrn,
+      correctionInfos: correctionInfos.filter(
+        (info) => info.key && info.value && info.cause
+      ),
+      addresses: addresses,
+      applicantInfo: {
+        name: birthRecord.personNameBn || birthRecord.personNameEn,
+        email: formData.email,
+        phone: formData.phone,
+        relationWithApplicant: formData.relationWithApplicant,
+      },
+      files: uploadedFiles,
+      otp: formData.otp,
+      captcha: formData.captcha,
+      csrf: data.csrf,
+      cookies: data.cookies,
+      isPermAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPermAddr,
+      isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
+    };
+
+    console.log("Submitting data:", submissionData);
+
+    // Mock API call
+    try {
+      await new Promise((r) => setTimeout(r, 2000));
+      toast.dismiss(loadingToast);
+      toast.success("আবেদন সফলভাবে জমা হয়েছে");
+    } catch (error) {
+      console.log(error)
+      toast.dismiss(loadingToast);
+      toast.error("আবেদন জমা করতে সমস্যা হয়েছে");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if addresses are selected
+  // const isBirthPlaceSelected = addresses.birthPlace.country !== "-1";
+  // const isPermAddressSelected = addresses.permAddress.country !== "-1";
+  // const isPrsntAddressSelected = addresses.prsntAddress.country !== "-1";
+
+  const sendOTP = async () => {
+    try {
+      if (!birthRecord?.personNameBn || !formData.ubrn) {
+        toast.error("প্রথমে UBRN অনুসন্ধান করুন");
+        return;
+      }
+
+      function validateMobile(mobile: string) {
+        const regex = /^01[0-9]{9}$/; // total 11 digits
+        return regex.test(mobile);
+      }
+
+      if (!validateMobile(formData.phone)) {
+        toast.error(
+          "মোবাইল নম্বর সঠিকভাবে পূরণ করুন (01 দিয়ে শুরু করে 11 সংখ্যা)"
+        );
+        return;
+      }
+
+      const loadingToast = toast.loading("OTP পাঠানো হচ্ছে...");
+
+      const response = await fetch("/api/otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phone: `+88${formData.phone}`,
+          personUbrn: formData.ubrn,
+          applicantName: birthRecord?.personNameBn,
+          relation: "SELF",
+          email: formData.email || "",
+          csrf: data.csrf,
+          cookies: data.cookies,
+        }),
+      });
+
+      toast.dismiss(loadingToast);
+
+      if (response.ok) {
+        toast.success("OTP সফলভাবে পাঠানো হয়েছে");
+      } else {
+        toast.error("OTP পাঠাতে সমস্যা হয়েছে");
+      }
+    } catch (error) {
+      console.log(error)
+      toast.error("OTP পাঠাতে সমস্যা হয়েছে");
+    }
+  };
+
+  const sessionReload = async () => {
+    try {
+      toast.loading("সেশন রিলোড হচ্ছে...", { id: "sessionReload" });
+      const response = await fetch("/api/correction/init");
+
+      if (response.ok) {
+        const newData = await response.json();
+        setData(newData);
+        toast.success("সেশন রিলোড সফলভাবে হয়েছে", { id: "sessionReload" });
+      } else {
+        toast.error("সেশন রিলোড করতে সমস্যা হয়েছে", { id: "sessionReload" }); //
+      }
+    } catch (error) {
+      console.log(error)
+      toast.error("সেশন রিলোড করতে সমস্যা হয়েছে", { id: "sessionReload" });
+    }
+  };
+
+  /* ── Render ───────────────────────────────────────────────────────────── */
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-4 text-center">
+              জন্ম তথ্য সংশোধনের জন্য আবেদন
+            </h1>
+            <div className="flex items-center justify-center mb-8">
+              <div className="flex items-center">
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                    currentStep >= 1
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  ১
+                </div>
+                <div
+                  className={`w-24 h-1 ${
+                    currentStep >= 2
+                      ? "bg-blue-600"
+                      : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                />
+                <div
+                  className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                    currentStep >= 2
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                  }`}
+                >
+                  ২
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ── STEP 1 ─────────────────────────────────────────────────────── */}
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      জন্ম নিবন্ধন নম্বর *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.ubrn}
+                      onChange={(e) =>
+                        handleInputChange("ubrn", e.target.value)
+                      }
+                      className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      জন্ম তারিখ *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="dd/mm/yyyy"
+                      value={formData.dob}
+                      onChange={(e) => handleInputChange("dob", e.target.value)}
+                      className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    ক্যাপচা *
+                  </label>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-3 sm:space-y-0">
+                    {/* Captcha & Reload */}
+                    <div className="flex items-center justify-between sm:justify-start bg-gray-200 dark:bg-gray-700 p-3 rounded-lg w-full sm:w-auto">
+                      <img
+                        src={data.captcha.src}
+                        alt="Captcha"
+                        className="h-14 w-auto max-w-4/5 object-contain rounded-md border border-gray-300 dark:border-gray-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => sessionReload()}
+                        className="ml-3 p-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-100 dark:hover:bg-gray-500 transition"
+                        title="Reload Captcha"
+                      >
+                        🔄
+                      </button>
+                    </div>
+
+                    {/* Input Field */}
+                    <input
+                      type="text"
+                      value={formData.captcha}
+                      onChange={(e) =>
+                        handleInputChange("captcha", e.target.value)
+                      }
+                      className="flex-1 w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      placeholder="ক্যাপচা লিখুন"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={searchByUbrn}
+                    disabled={isLoading}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-700 dark:hover:bg-blue-800"
+                  >
+                    {isLoading ? "অনুসন্ধান..." : "অনুসন্ধান"}
+                  </button>
+                </div>
+
+                {birthRecord && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
+                      অনুসন্ধান ফলাফল
+                    </h3>
+                    <div className="bg-green-50 dark:bg-green-900/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="text-center mb-4">
+                        <h4 className="text-xl font-bold text-green-800 dark:text-green-400">
+                          তথ্য পাওয়া গেছে!
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded border dark:border-gray-700">
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>নাম (বাংলা):</strong>{" "}
+                            {birthRecord.personNameBn}
+                          </div>
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>নাম (ইংরেজি):</strong>{" "}
+                            {birthRecord.personNameEn}
+                          </div>
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>জন্ম তারিখ:</strong> {birthRecord.personDob}
+                          </div>
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>UBRN:</strong> {birthRecord.ubrn}
+                          </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded border dark:border-gray-700">
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>পিতার নাম (বাংলা):</strong>{" "}
+                            {birthRecord.fatherNameBn}
+                          </div>
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>মাতার নাম (বাংলা):</strong>{" "}
+                            {birthRecord.motherNameBn}
+                          </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded border dark:border-gray-700 md:col-span-2">
+                          <div className="text-gray-900 dark:text-gray-100">
+                            <strong>অফিস:</strong>{" "}
+                            {birthRecord.officeAddressBn}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(2)}
+                          className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                        >
+                          তথ্য সঠিক, পরবর্তী ধাপ
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── STEP 2 ─────────────────────────────────────────────────────── */}
+            {currentStep === 2 && birthRecord && (
+              <div className="space-y-6">
+                {/* ---------- User Information Summary ---------- */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-lg font-semibold mb-4 text-blue-800 dark:text-blue-400">
+                    নির্বাচিত ব্যক্তির তথ্য
+                  </h3>
+                  <div className="w-full text-center">
+                    <h2 className="font-bold pb-2 text-gray-800 dark:text-white">
+                      {birthRecord.officeAddressBn}
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
+                        <div className="font-medium text-gray-700 dark:text-gray-300">
+                          নাম (বাংলা):
+                        </div>
+                        <div className="text-gray-900 dark:text-gray-100">
+                          {birthRecord.personNameBn}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
+                        <div className="font-medium text-gray-700 dark:text-gray-300">
+                          নাম (ইংরেজি):
+                        </div>
+                        <div className="text-gray-900 dark:text-gray-100">
+                          {birthRecord.personNameEn}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
+                        <div className="font-medium text-gray-700 dark:text-gray-300">
+                          জন্ম তারিখ:
+                        </div>
+                        <div className="text-gray-900 dark:text-gray-100">
+                          {birthRecord.personDob}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="bg-white dark:bg-gray-800 p-3 rounded border dark:border-gray-700">
+                        <div className="font-medium text-gray-700 dark:text-gray-300">
+                          UBRN:
+                        </div>
+                        <div className="text-gray-900 dark:text-gray-100">
+                          {birthRecord.ubrn}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ---------- Address Selection Status ---------- */}
+                {/* <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <h3 className="text-lg font-semibold mb-4 text-yellow-800 dark:text-yellow-400">
+                    ঠিকানা নির্বাচন স্ট্যাটাস
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div
+                      className={`p-4 rounded-lg border ${
+                        isBirthPlaceSelected
+                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                      }`}
+                    >
+                      <div className="font-medium text-gray-800 dark:text-gray-200">
+                        জন্মস্থানের ঠিকানা
+                      </div>
+                      <div
+                        className={`text-sm ${
+                          isBirthPlaceSelected
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {isBirthPlaceSelected
+                          ? "✓ নির্বাচন করা হয়েছে"
+                          : "✗ নির্বাচন করা হয়নি"}
+                      </div>
+                    </div>
+                    <div
+                      className={`p-4 rounded-lg border ${
+                        isPermAddressSelected
+                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                      }`}
+                    >
+                      <div className="font-medium text-gray-800 dark:text-gray-200">
+                        স্থায়ী ঠিকানা
+                      </div>
+                      <div
+                        className={`text-sm ${
+                          isPermAddressSelected
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {isPermAddressSelected
+                          ? "✓ নির্বাচন করা হয়েছে"
+                          : "✗ নির্বাচন করা হয়নি"}
+                      </div>
+                    </div>
+                    <div
+                      className={`p-4 rounded-lg border ${
+                        isPrsntAddressSelected
+                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                      }`}
+                    >
+                      <div className="font-medium text-gray-800 dark:text-gray-200">
+                        বর্তমান ঠিকানা
+                      </div>
+                      <div
+                        className={`text-sm ${
+                          isPrsntAddressSelected
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {isPrsntAddressSelected
+                          ? "✓ নির্বাচন করা হয়েছে"
+                          : "✗ নির্বাচন করা হয়নি"}
+                      </div>
+                    </div>
+                  </div>
+                </div> */}
+
+                {/* ---------- Correction Infos ---------- */}
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
+                    সংশোধিত তথ্য নির্বাচন *
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    কমপক্ষে একটি সংশোধিত তথ্য যোগ করুন
+                  </p>
+                  {correctionInfos.map((info) => (
+                    <div
+                      key={info.id}
+                      className="bg-white dark:bg-gray-700 p-4 rounded border dark:border-gray-600 mb-4"
+                    >
+                      <div>
+                        <select
+                          value={info.key}
+                          onChange={(e) =>
+                            updateCorrectionInfo(info.id, "key", e.target.value)
+                          }
+                          className="px-3 py-2 border rounded w-full my-4 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                          required
+                        >
+                          <option value="">---নির্বাচন করুন---</option>
+                          {currectionList.map((c) => {
+                            return (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <input
+                          value={info.value}
+                          onChange={(e) =>
+                            updateCorrectionInfo(
+                              info.id,
+                              "value",
+                              e.target.value
+                            )
+                          }
+                          className="px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                          placeholder="চাহিত সংশোধিত তথ্য"
+                          required
+                        />
+                      </div>
+                      {correctionInfos.length > 0 && (
+                        <div className="mt-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => removeCorrectionInfo(info.id)}
+                            className="text-red-600 dark:text-red-400 text-sm"
+                          >
+                            মুছে ফেলুন
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {correctionInfos.length < 3 && (
+                    <button
+                      type="button"
+                      onClick={addCorrectionInfo}
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                    >
+                      + আরো তথ্য
+                    </button>
+                  )}
+                </div>
+
+                {/* ---------- Address Section ---------- */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                    ঠিকানা সংশোধন *
+                  </h3>
+
+                  {/* Birth Place Address */}
+                  <AddressDisplay
+                    address={addresses.birthPlace}
+                    type="birthPlace"
+                    onEdit={() => openAddressModal("birthPlace")}
+                  />
+
+                  {/* Copy to Permanent Address Checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="copyBirthPlaceToPermAddr"
+                      checked={formData.copyBirthPlaceToPermAddr}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "copyBirthPlaceToPermAddr",
+                          e.target.checked
+                        )
+                      }
+                      className="rounded dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    <label
+                      htmlFor="copyBirthPlaceToPermAddr"
+                      className="text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      জন্মস্থানের ঠিকানা স্থায়ী ঠিকানায় কপি করুন
+                    </label>
+                  </div>
+
+                  {/* Permanent Address */}
+                  <AddressDisplay
+                    address={addresses.permAddress}
+                    type="permAddress"
+                    onEdit={() => openAddressModal("permAddress")}
+                  />
+
+                  {/* Copy to Present Address Checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="copyBirthPlaceToPrsntAddr"
+                      checked={formData.copyBirthPlaceToPrsntAddr}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "copyBirthPlaceToPrsntAddr",
+                          e.target.checked
+                        )
+                      }
+                      className="rounded dark:bg-gray-700 dark:border-gray-600"
+                    />
+                    <label
+                      htmlFor="copyBirthPlaceToPrsntAddr"
+                      className="text-sm text-gray-700 dark:text-gray-300"
+                    >
+                      জন্মস্থানের ঠিকানা বর্তমান ঠিকানায় কপি করুন
+                    </label>
+                  </div>
+
+                  {/* Present Address */}
+                  <AddressDisplay
+                    address={addresses.prsntAddress}
+                    type="prsntAddress"
+                    onEdit={() => openAddressModal("prsntAddress")}
+                  />
+                </div>
+
+                {/* ---------- File Upload ---------- */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+                    ফাইল আপলোড
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    শুধুমাত্র ইমেজ ফাইল (.jpg, .jpeg, .png) আপলোড করা যাবে।
+                    (প্রতিটি ফাইলের জন্য সর্বোচ্চ ফাইল সাইজ 2 মেগা বাইট)
+                  </p>
+                  <div className="mt-2 border-dashed border-2 p-4 rounded dark:border-gray-600">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      multiple
+                      accept="image/*,.pdf"
+                      onChange={handleFileSelect}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    >
+                      ফাইল নির্বাচন করুন
+                    </button>
+                  </div>
+
+                  {/* Uploading list */}
+                  {uploadingFiles.map((item, idx) => (
+                    <div
+                      key={`uploading-${idx}`}
+                      className="mt-2 flex items-center gap-2"
+                    >
+                      <span className="flex-1 truncate text-gray-700 dark:text-gray-300">
+                        {item.file.name}
+                      </span>
+                      <select
+                        value={item.fileTypeId}
+                        onChange={(e) =>
+                          updateUploadingFileType(idx, e.target.value)
+                        }
+                        className="px-2 py-1 border overflow-x-hidden max-w-1/3 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      >
+                        <option value="-1">---টাইপ---</option>
+                        {fileTypes.map((t) => (
+                          <option key={`filetype-${t.id}`} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleFileUpload(idx)}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                      >
+                        Upload
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeUploadingFile(idx)}
+                        className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Uploaded list */}
+                  {uploadedFiles.map((f) => (
+                    <div
+                      key={`uploaded-${f.id}`}
+                      className="mt-2 flex items-center gap-2"
+                    >
+                      <a
+                        href={f.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 truncate text-blue-600 dark:text-blue-400"
+                      >
+                        {f.name} ( {f.fileType} )
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setUploadedFiles((p) =>
+                            p.filter((x) => x.id !== f.id)
+                          )
+                        }
+                        className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ---------- Applicant Information ---------- */}
+                <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700">
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
+                    আবেদনকারীর তথ্য *
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        আবেদনকারীর নাম *
+                      </label>
+                      <input
+                        type="text"
+                        value={birthRecord.personNameBn}
+                        className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        readOnly
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        ইমেইল
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        placeholder="example@email.com"
+                      />
+                    </div>
+                    {/* Phone input with Send button on the right */}
+                    <div className="mb-4 w-full">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        ফোন নম্বর *
+                      </label>
+                      <div className="flex flex-col sm:flex-row w-full">
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) =>
+                            handleInputChange("phone", e.target.value)
+                          }
+                          className="flex-1 px-3 py-2 border rounded-md sm:rounded-l-md sm:rounded-r-none w-full mb-2 sm:mb-0 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          placeholder="01XXXXXXXXX"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={sendOTP}
+                          className="bg-green-500 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-md sm:rounded-l-none sm:rounded-r-md w-full sm:w-auto dark:bg-green-600 dark:hover:bg-green-700"
+                        >
+                          Send
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* OTP input with Verify button on the right */}
+                    <div className="w-full">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        OTP *
+                      </label>
+                      <div className="flex flex-col sm:flex-row w-full">
+                        <input
+                          type="text"
+                          value={formData.otp}
+                          onChange={(e) =>
+                            handleInputChange("otp", e.target.value)
+                          }
+                          className="flex-1 px-3 py-2 border rounded-md sm:rounded-l-md sm:rounded w-full mb-2 sm:mb-0 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          placeholder="Enter OTP"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ---------- Navigation ---------- */}
+                <div className="flex justify-between pt-6 border-t dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-800"
+                  >
+                    পূর্ববর্তী
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    onClick={handleSubmit}
+                    className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 dark:bg-green-700 dark:hover:bg-green-800"
+                  >
+                    {isLoading ? "জমা হচ্ছে..." : "আবেদন জমা দিন"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
+
+      {/* ── ADDRESS MODAL ───────────────────────────────────────────────────── */}
+      {showAddressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-white">
+                ঠিকানা নির্বাচন করুন
+              </h3>
+              <button
+                onClick={closeAddressModal}
+                className="text-gray-500 dark:text-gray-400 text-2xl hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            </div>
+
+            <BDRISGeoSelector
+              onApply={applyAddressFromSelector}
+              initial={addresses[currentAddressType]}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
