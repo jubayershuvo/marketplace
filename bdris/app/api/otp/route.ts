@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Disable SSL verification (only in dev)
-    if (process.env.NODE_ENV === "development") {
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-    }
+    // if (process.env.NODE_ENV === "development") {
+    //   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    // }
 
     // Build query parameters safely
     const params = new URLSearchParams({
@@ -77,12 +77,12 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       console.error("BDRIS error:", jsonData);
       return NextResponse.json(
-        { success: false, error: jsonData?.error || "BDRIS request failed" },
+        { success: false, error: jsonData || "BDRIS request failed" },
         { status: response.status }
       );
     }
 
-    console.log("BDRIS response:", jsonData);
+    console.log("BDRIS response:", jsonData.isVerified);
 
     return NextResponse.json({ success: true, data: jsonData });
   } catch (err: unknown) {

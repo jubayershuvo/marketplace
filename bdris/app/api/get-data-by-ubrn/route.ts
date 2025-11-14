@@ -8,9 +8,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Disable SSL verification (DEV only)
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-    console.info(`Request received for UBRN: ${ubrn}, DOB: ${dob}, Captcha: ${captcha}`);
+    // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
     const url = `https://bdris.gov.bd/api/br/search-by-ubrn-and-dob?ubrn=${ubrn}&personBirthDate=${dob}&captchaAns=${captcha}`;
 

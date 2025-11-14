@@ -46,6 +46,7 @@ interface BirthRecord {
   ubrn: string;
   registrationOfficeNameBn: string;
   officeAddressBn: string;
+  officeId: string;
   divisionId?: string;
   divisionName?: string;
   districtId?: string;
@@ -888,42 +889,81 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     { file: File; fileTypeId: string }[]
   >([]);
   const [fileTypes] = useState<FileType[]>([
-  {"id": "1", "name": "পিতার জন্ম নিবন্ধন সনদ"},
-  {"id": "2", "name": "মাতার জন্ম নিবন্ধন সনদ"},
-  {"id": "3", "name": "পিতার জাতীয় পরিচয়পত্র"},
-  {"id": "4", "name": "মাতার জাতীয় পরিচয়পত্র"},
-  {"id": "5", "name": "ই পি আই কার্ড"},
-  {"id": "6", "name": "স্থায়ী ঠিকানার প্রমাণ"},
-  {"id": "7", "name": "বর্তমান ঠিকানার প্রমাণ"},
-  {"id": "8", "name": "পিতার পাসপোর্টের স্ক্যান করা কপি"},
-  {"id": "9", "name": "মাতার পাসপোর্টের স্ক্যান করা কপি"},
-  {"id": "10", "name": "পিতার পাসপোর্ট সাইজের ছবি"},
-  {"id": "11", "name": "মাতার পাসপোর্ট সাইজের ছবি"},
-  {"id": "12", "name": "নিবন্ধনাধীন ব্যক্তির পাসপোর্ট সাইজের ছবি"},
-  {"id": "13", "name": "নিবন্ধনাধীন ব্যক্তির এস এস সি সার্টিফিকেটের স্ক্যান করা কপি"},
-  {"id": "14", "name": "পিতার মৃত্যুর প্রমাণ"},
-  {"id": "15", "name": "মাতার মৃত্যুর প্রমাণ"},
-  {"id": "16", "name": "নিবন্ধনাধীন ব্যাক্তির জাতীয় পরিচয়পত্র"},
-  {"id": "44", "name": "ইস্যু সম্পর্কিত ফাইল"},
-  {"id": "17", "name": "প্রাথমিক স্কুল সার্টিফিকেট (পিএসসি)"},
-  {"id": "45", "name": "অঙ্গীকারনামা"},
-  {"id": "46", "name": "নিবন্ধকের প্রত্যয়নপত্র"},
-  {"id": "47", "name": "হাতে লিখা বইয়ের সংশ্লিষ্ট পৃষ্ঠার সত্যায়িত কপি"},
-  {"id": "18", "name": "জুনিয়র স্কুল সার্টিফিকেট (জেএসসি)"},
-  {"id": "48", "name": "হাতে লিখা সনদের কপি"},
-  {"id": "20", "name": "চিকিৎসা প্রতিষ্ঠানের ছাড়পত্র বা চিকিৎসা প্রতিষ্ঠান প্রদত্ত জন্ম সংক্রান্ত সনদের সত্যায়িত কপি বা পূরণকৃ্ত আবেদনপত্রে বার্থ এটেন্ডের এর প্রত্যায়ন বা ইপিআই কার্ডের সত্যায়িত অনুলিপি"},
-  {"id": "21", "name": "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)"},
-  {"id": "22", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
-  {"id": "23", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
-  {"id": "30", "name": "চিকিৎসা প্রতিষ্ঠানের ছাড়পত্র বা চিকিৎসা প্রতিষ্ঠান প্রদত্ত জন্ম সংক্রান্ত সনদের সত্যায়িত কপি বা পূরণকৃ্ত আবেদনপত্রে বার্থ এটেন্ডের এর প্রত্যায়ন বা ইপিআই কার্ডের সত্যায়িত অনুলিপি ।"},
-  {"id": "31", "name": "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)"},
-  {"id": "32", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
-  {"id": "33", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
-  {"id": "40", "name": "চিকিৎসক কর্তৃক প্রত্যায়ন পত্র (বাংলাদেশ মেডিক্যাল এন্ড ডেন্টাল কাউন্সিল কর্তৃক স্বীকৃত এমবিবিএস বা তদূর্ধ্ব ডিগ্রিধারী) বা সরকার কর্তৃক পরিচালিত প্রথমিক শিক্ষা সমাপনী, জুনিয়র স্কুল সার্টিফিকেট এবং শিক্ষা বোর্ড কর্তৃক পরিচালিত মাধ্যমিক স্কুল সার্টিফিকেট"},
-  {"id": "41", "name": "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)"},
-  {"id": "42", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ"},
-  {"id": "43", "name": "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ"}
-]);
+    { id: "1", name: "পিতার জন্ম নিবন্ধন সনদ" },
+    { id: "2", name: "মাতার জন্ম নিবন্ধন সনদ" },
+    { id: "3", name: "পিতার জাতীয় পরিচয়পত্র" },
+    { id: "4", name: "মাতার জাতীয় পরিচয়পত্র" },
+    { id: "5", name: "ই পি আই কার্ড" },
+    { id: "6", name: "স্থায়ী ঠিকানার প্রমাণ" },
+    { id: "7", name: "বর্তমান ঠিকানার প্রমাণ" },
+    { id: "8", name: "পিতার পাসপোর্টের স্ক্যান করা কপি" },
+    { id: "9", name: "মাতার পাসপোর্টের স্ক্যান করা কপি" },
+    { id: "10", name: "পিতার পাসপোর্ট সাইজের ছবি" },
+    { id: "11", name: "মাতার পাসপোর্ট সাইজের ছবি" },
+    { id: "12", name: "নিবন্ধনাধীন ব্যক্তির পাসপোর্ট সাইজের ছবি" },
+    {
+      id: "13",
+      name: "নিবন্ধনাধীন ব্যক্তির এস এস সি সার্টিফিকেটের স্ক্যান করা কপি",
+    },
+    { id: "14", name: "পিতার মৃত্যুর প্রমাণ" },
+    { id: "15", name: "মাতার মৃত্যুর প্রমাণ" },
+    { id: "16", name: "নিবন্ধনাধীন ব্যাক্তির জাতীয় পরিচয়পত্র" },
+    { id: "44", name: "ইস্যু সম্পর্কিত ফাইল" },
+    { id: "17", name: "প্রাথমিক স্কুল সার্টিফিকেট (পিএসসি)" },
+    { id: "45", name: "অঙ্গীকারনামা" },
+    { id: "46", name: "নিবন্ধকের প্রত্যয়নপত্র" },
+    { id: "47", name: "হাতে লিখা বইয়ের সংশ্লিষ্ট পৃষ্ঠার সত্যায়িত কপি" },
+    { id: "18", name: "জুনিয়র স্কুল সার্টিফিকেট (জেএসসি)" },
+    { id: "48", name: "হাতে লিখা সনদের কপি" },
+    {
+      id: "20",
+      name: "চিকিৎসা প্রতিষ্ঠানের ছাড়পত্র বা চিকিৎসা প্রতিষ্ঠান প্রদত্ত জন্ম সংক্রান্ত সনদের সত্যায়িত কপি বা পূরণকৃ্ত আবেদনপত্রে বার্থ এটেন্ডের এর প্রত্যায়ন বা ইপিআই কার্ডের সত্যায়িত অনুলিপি",
+    },
+    {
+      id: "21",
+      name: "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)",
+    },
+    {
+      id: "22",
+      name: "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ",
+    },
+    {
+      id: "23",
+      name: "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ",
+    },
+    {
+      id: "30",
+      name: "চিকিৎসা প্রতিষ্ঠানের ছাড়পত্র বা চিকিৎসা প্রতিষ্ঠান প্রদত্ত জন্ম সংক্রান্ত সনদের সত্যায়িত কপি বা পূরণকৃ্ত আবেদনপত্রে বার্থ এটেন্ডের এর প্রত্যায়ন বা ইপিআই কার্ডের সত্যায়িত অনুলিপি ।",
+    },
+    {
+      id: "31",
+      name: "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)",
+    },
+    {
+      id: "32",
+      name: "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ",
+    },
+    {
+      id: "33",
+      name: "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ",
+    },
+    {
+      id: "40",
+      name: "চিকিৎসক কর্তৃক প্রত্যায়ন পত্র (বাংলাদেশ মেডিক্যাল এন্ড ডেন্টাল কাউন্সিল কর্তৃক স্বীকৃত এমবিবিএস বা তদূর্ধ্ব ডিগ্রিধারী) বা সরকার কর্তৃক পরিচালিত প্রথমিক শিক্ষা সমাপনী, জুনিয়র স্কুল সার্টিফিকেট এবং শিক্ষা বোর্ড কর্তৃক পরিচালিত মাধ্যমিক স্কুল সার্টিফিকেট",
+    },
+    {
+      id: "41",
+      name: "পিতা / মাতা/ পিতামহ / পিতামহীর দ্বারা স্বনামে স্থায়ী ঠিকানা হিসেবে ঘোষিত আবাস স্থলের বিপরীতে হালনাগাদ কর পরিশোধের প্রমানপত্র বা পিতা / মাতা/ পিতামহ / পিতামহীর জাতীয় পরিচয়পত্র বা পাসপোর্ট ঘোষিত স্থায়ী ঠিকানা বা জমি অথবা বাড়ি ক্রয়ের দলিল , খাজনা ও কর পরিশোধ রশিদ। (নদীভাঙ্গন অন্য কোন কারনে স্থায়ী ঠিকানা বিলুপ্ত হলে)",
+    },
+    {
+      id: "42",
+      name: "জন্ম নিবন্ধনাধীন ব্যক্তির পিতার জন্ম নিবন্ধন নম্বরসহ সনদ",
+    },
+    {
+      id: "43",
+      name: "জন্ম নিবন্ধনাধীন ব্যক্তির মাতার জন্ম নিবন্ধন নম্বরসহ সনদ",
+    },
+  ]);
   const [currectionList] = useState<FileType[]>([
     {
       id: "personBirthDate",
@@ -1311,7 +1351,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
 
       toast.success("তথ্য পাওয়া গেছে এবং ঠিকানা লোড করা হয়েছে");
     } catch (e) {
-      console.log(e)
+      console.log(e);
       toast.error("অনুসন্ধান ব্যর্থ");
     } finally {
       setIsLoading(false);
@@ -1402,7 +1442,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       setUploadedFiles((p) => [...p, uploaded]);
       setUploadingFiles((p) => p.filter((_, i) => i !== idx));
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   };
 
@@ -1451,7 +1491,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     }
   };
 
-  /* ── Submit (mock) ───────────────────────────────────────────────────── */
+  /* ── Submit ───────────────────────────────────────────────────── */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!birthRecord) {
@@ -1467,54 +1507,22 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       return;
     }
 
-    // const validateMobile = (mobile: string) => {
-    //   const regex = /^0[0-9]{11}$/;
-    //   return regex.test(mobile);
-    // };
-
-    // if (!validateMobile(formData.phone)) {
-    //   toast.error("মোবাইল নম্বর সঠিকভাবে পূরণ করুন (01 দিয়ে শুরু করে 11 সংখ্যা)");
-    //   return;
-    // }
-
-    // Validate that at least one correction info is filled
-    // const hasValidCorrection = correctionInfos.some(
-    //   (info) => info.key && info.value && info.cause
-    // );
-
-    // if (!hasValidCorrection) {
-    //   toast.error("দয়া করে কমপক্ষে একটি সংশোধিত তথ্য যোগ করুন");
-    //   return;
-    // }
-
-    // Validate addresses
-    // if (addresses.birthPlace.country === "-1") {
-    //   toast.error("দয়া করে জন্মস্থানের ঠিকানা নির্বাচন করুন");
-    //   return;
-    // }
-    // if (addresses.permAddress.country === "-1") {
-    //   toast.error("দয়া করে স্থায়ী ঠিকানা নির্বাচন করুন");
-    //   return;
-    // }
-    // if (addresses.prsntAddress.country === "-1") {
-    //   toast.error("দয়া করে বর্তমান ঠিকানা নির্বাচন করুন");
-    //   return;
-    // }
-
     setIsLoading(true);
-    const loadingToast = toast.loading("আবেদন জমা হচ্ছে...");
+    toast.loading("আবেদন জমা হচ্ছে...", {
+      id: "submission",
+    });
 
     // Prepare data for API submission
     const submissionData = {
       ubrn: formData.ubrn,
-      correctionInfos: correctionInfos.filter(
-        (info) => info.key && info.value && info.cause
-      ),
+      dob: birthRecord.personDob,
+      correctionInfos,
       addresses: addresses,
       applicantInfo: {
         name: birthRecord.personNameBn || birthRecord.personNameEn,
+        officeId: birthRecord.officeId,
         email: formData.email,
-        phone: formData.phone,
+        phone: `+88${formData.phone}`,
         relationWithApplicant: formData.relationWithApplicant,
       },
       files: uploadedFiles,
@@ -1526,26 +1534,54 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
     };
 
-    console.log("Submitting data:", submissionData);
-
     // Mock API call
     try {
-      await new Promise((r) => setTimeout(r, 2000));
-      toast.dismiss(loadingToast);
-      toast.success("আবেদন সফলভাবে জমা হয়েছে");
+      const response = await fetch("/api/otp-verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personUbrn: formData.ubrn,
+          cookies: submissionData.cookies,
+          csrf: submissionData.csrf,
+          otp: submissionData.otp,
+          email: submissionData.applicantInfo.email,
+          phone: submissionData.applicantInfo.phone,
+        }),
+      });
+ console.log(JSON.stringify(submissionData))
+      const respData = await response.json();
+      if (respData.data.isVerified !== true) {
+        toast.error("OTP যাচাই ব্যর্থ হয়েছে", { id: "submission" });
+        return;
+      }
+
+      try {
+        const resp = await fetch("/api/correction", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(submissionData),
+        });
+        const data = await resp.json();
+        if (data.success !== true) {
+          toast.error(data.error.message, { id: "submission" });
+          return;
+        }
+        console.log(data);
+        toast.success("আবেদন সফলভাবে জমা হয়েছে", { id: "submission" });
+      } catch (error) {
+        toast.error("আবেদন জমা করতে সমস্যা হয়েছে", { id: "submission" });
+      }
     } catch (error) {
-      console.log(error)
-      toast.dismiss(loadingToast);
-      toast.error("আবেদন জমা করতে সমস্যা হয়েছে");
+      console.log(error);
+      toast.error("আবেদন জমা করতে সমস্যা হয়েছে", { id: "submission" });
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Check if addresses are selected
-  // const isBirthPlaceSelected = addresses.birthPlace.country !== "-1";
-  // const isPermAddressSelected = addresses.permAddress.country !== "-1";
-  // const isPrsntAddressSelected = addresses.prsntAddress.country !== "-1";
 
   const sendOTP = async () => {
     try {
@@ -1565,8 +1601,39 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         );
         return;
       }
-
-      const loadingToast = toast.loading("OTP পাঠানো হচ্ছে...");
+      const submissionData = {
+        ubrn: formData.ubrn,
+        dob: birthRecord.personDob,
+        correctionInfos,
+        addresses: addresses,
+        applicantInfo: {
+          name: birthRecord.personNameBn || birthRecord.personNameEn,
+          officeId: birthRecord.officeId,
+          email: formData.email,
+          phone: `+88${formData.phone}`,
+          relationWithApplicant: formData.relationWithApplicant,
+        },
+        files: uploadedFiles,
+        captcha: formData.captcha,
+        csrf: data.csrf,
+        cookies: data.cookies,
+        isPermAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPermAddr,
+        isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
+      };
+      console.log(JSON.stringify(submissionData))
+      toast.loading("OTP পাঠানো হচ্ছে...", { id: "otp" });
+      const resp = await fetch("/api/is-valid", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submissionData),
+      });
+      const res = await resp.json();
+      if (res.success !== true) {
+        toast.error(res.error.message || res.message, { id: "otp" });
+        return;
+      }
 
       const response = await fetch("/api/otp", {
         method: "POST",
@@ -1584,15 +1651,15 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         }),
       });
 
-      toast.dismiss(loadingToast);
-
+      const resData = await response.json();
       if (response.ok) {
-        toast.success("OTP সফলভাবে পাঠানো হয়েছে");
+        toast.success("OTP সফলভাবে পাঠানো হয়েছে", { id: "otp" });
       } else {
-        toast.error("OTP পাঠাতে সমস্যা হয়েছে");
+        toast.error(resData.error.message ||"OTP পাঠাতে সমস্যা হয়েছে", { id: "otp" });
+        
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
       toast.error("OTP পাঠাতে সমস্যা হয়েছে");
     }
   };
@@ -1610,7 +1677,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         toast.error("সেশন রিলোড করতে সমস্যা হয়েছে", { id: "sessionReload" }); //
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
       toast.error("সেশন রিলোড করতে সমস্যা হয়েছে", { id: "sessionReload" });
     }
   };
@@ -1780,8 +1847,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
 
                         <div className="bg-white dark:bg-gray-800 p-4 rounded border dark:border-gray-700 md:col-span-2">
                           <div className="text-gray-900 dark:text-gray-100">
-                            <strong>অফিস:</strong>{" "}
-                            {birthRecord.officeAddressBn}
+                            <strong>অফিস:</strong> {birthRecord.officeAddressBn}
                           </div>
                         </div>
                       </div>

@@ -5,33 +5,36 @@ const userAgentString =
 
 export async function POST(req: NextRequest) {
   try {
-     const formDataBody = await req.formData();
+    const { personUbrn, cookies, csrf, phone, email, otp } = await req.json();
 
-    // Extract simple fields
-    const attachmentType = formDataBody.get("attachmentType") as string;
-    const attachmentSubType = formDataBody.get("attachmentSubType") as string;
-    const csrf = formDataBody.get("csrf") as string;
-    const cookies = formDataBody.get("cookies") as string;
-
-        // Extract file(s)
-    const file = formDataBody.get("files") as File | null;
-
-    if (!file) {
+    if (!personUbrn || !phone || !csrf) {
       return NextResponse.json(
-        { success: false, error: "No file uploaded" },
+        { success: false, error: "Missing required fields" },
         { status: 400 }
       );
     }
-
 
     // Disable SSL verification (only in dev)
     // if (process.env.NODE_ENV === "development") {
     //   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
     // }
 
-    // Build query parameters safel
+    // Build query parameters safely
+    const params = new URLSearchParams({
+      appType: "BIRTH_INFORMATION_CORRECTION_APPLICATION",
+      otp,
+      phone,
+      officeId: "0",
+      personUbrn,
+      geoLocationId: "0",
+      ubrn: "",
+      nid: "",
+      officeAddressType: "",
+    });
 
-    const url = `https://bdris.gov.bd/admin/doc/upload`;
+    if (email) params.append("email", email);
+
+    const url = `https://bdris.gov.bd/api/otp/verify?${params.toString()}`;
 
     // Build headers
     const headers = new Headers({
@@ -42,15 +45,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (cookies?.length) {
-      headers.set("Cookie", cookies);
+      headers.set("Cookie", cookies.join("; "));
     }
 
     // Build form data
     const formData = new FormData();
     formData.append("_csrf", csrf);
-    formData.append("attachmentType", attachmentType);
-    formData.append("attachmentSubType", attachmentSubType || "-1");
-    formData.append("files", file);
 
     // Make the request
     const response = await fetch(url, {
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 
     console.log("BDRIS response:", jsonData);
 
-    return NextResponse.json({ success: true, data: jsonData.files });
+    return NextResponse.json({ success: true, data: jsonData });
   } catch (err: unknown) {
     console.error("BDRIS request error:", err);
 
