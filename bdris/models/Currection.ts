@@ -3,20 +3,20 @@ import mongoose, { Schema, model, Model } from "mongoose";
 /* ---------------- File Schema ---------------- */
 export interface IFile {
   id: string;
-  name: string;
-  url: string;
+  name?: string;
+  url?: string;
   deleteUrl?: string;
   attachmentTypeId: string;
-  fileType: string;
+  fileType?: string;
 }
 
 const fileSchema = new Schema<IFile>({
   id: { type: String, required: true },
-  name: { type: String, required: true },
-  url: { type: String, required: true },
+  name: { type: String },
+  url: { type: String },
   deleteUrl: { type: String, default: "" },
-  attachmentTypeId: { type: String, required: true },
-  fileType: { type: String, required: true },
+  attachmentTypeId: { type: String },
+  fileType: { type: String },
 });
 
 /* ---------------- Correction Info ---------------- */
@@ -28,32 +28,32 @@ export interface ICorrectionInfo {
 }
 
 const correctionInfoSchema = new Schema<ICorrectionInfo>({
-  id: { type: String, required: true },
-  key: { type: String, required: true },
-  value: { type: String, required: true },
-  cause: { type: String, required: true },
+  id: { type: String },
+  key: { type: String },
+  value: { type: String },
+  cause: { type: String, default: "2" },
 });
 
 /* ---------------- Address Block ---------------- */
 export interface IAddressBlock {
-  country: string;
-  geoId: string;
-  division: string;
-  divisionName: string;
-  district: string;
-  districtName: string;
-  cityCorpCantOrUpazila: string;
-  upazilaName: string;
-  paurasavaOrUnion: string;
-  unionName: string;
-  postOfc: string;
-  postOfcEn: string;
-  vilAreaTownBn: string;
-  vilAreaTownEn: string;
-  houseRoadBn: string;
-  houseRoadEn: string;
-  ward: string;
-  wardName: string;
+  country?: string;
+  geoId?: string;
+  division?: string;
+  divisionName?: string;
+  district?: string;
+  districtName?: string;
+  cityCorpCantOrUpazila?: string;
+  upazilaName?: string;
+  paurasavaOrUnion?: string;
+  unionName?: string;
+  postOfc?: string;
+  postOfcEn?: string;
+  vilAreaTownBn?: string;
+  vilAreaTownEn?: string;
+  houseRoadBn?: string;
+  houseRoadEn?: string;
+  ward?: string;
+  wardName?: string;
 }
 
 const addressBlockSchema = new Schema<IAddressBlock>({

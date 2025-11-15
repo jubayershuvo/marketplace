@@ -1449,14 +1449,14 @@ const router = useRouter();
 
   /* ── Correction helpers ──────────────────────────────────────────────── */
   const addCorrectionInfo = () => {
-    if (correctionInfos.length < 3) {
+    if (correctionInfos.length < 20) {
       setCorrectionInfos((p) => [
         ...p,
         { id: Date.now().toString(), key: "", value: "", cause: "" },
       ]);
       toast.success("নতুন সংশোধিত তথ্য যোগ করা হয়েছে");
     } else {
-      toast.error("সর্বোচ্চ ৩টি সংশোধিত তথ্য যোগ করা যাবে");
+      toast.error("সর্বোচ্চ ২০ টি সংশোধিত তথ্য যোগ করা যাবে");
     }
   };
 
@@ -2060,7 +2060,7 @@ const router = useRouter();
                       )}
                     </div>
                   ))}
-                  {correctionInfos.length < 3 && (
+                
                     <button
                       type="button"
                       onClick={addCorrectionInfo}
@@ -2068,7 +2068,7 @@ const router = useRouter();
                     >
                       + আরো তথ্য
                     </button>
-                  )}
+               
                 </div>
 
                 {/* ---------- Address Section ---------- */}
