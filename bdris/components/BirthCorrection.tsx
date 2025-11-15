@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { countriesList } from "@/json/countries";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Types
@@ -856,7 +857,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   ]);
 
   const [data, setData] = useState<IData>(InitData);
-
+const router = useRouter();
   // Enhanced address states with better initialization
   const [addresses, setAddresses] = useState<{
     birthPlace: Address;
@@ -869,8 +870,8 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   });
 
   const [formData, setFormData] = useState({
-    ubrn: "20021210736113690",
-    dob: "24/03/2002",
+    ubrn: "",
+    dob: "",
     captcha: "",
     relationWithApplicant: "SELF",
     applicantName: "",
@@ -1316,8 +1317,8 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       const userData = await res.json();
       setBirthRecord(userData.data);
 
-      if (userData.error) {
-        toast.error(userData.error);
+      if (userData.success === false) {
+        toast.error(userData.error.message);
         return;
       }
 
@@ -1534,28 +1535,26 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
     };
 
-    // Mock API call
     try {
-            const response = await fetch("/api/otp-verify", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                personUbrn: formData.ubrn,
-                cookies: submissionData.cookies,
-                csrf: submissionData.csrf,
-                otp: submissionData.otp,
-                email: submissionData.applicantInfo.email,
-                phone: submissionData.applicantInfo.phone,
-              }),
-            });
-       console.log(JSON.stringify(submissionData))
-            const respData = await response.json();
-            if (respData.data.isVerified !== true) {
-              toast.error("OTP যাচাই ব্যর্থ হয়েছে", { id: "submission" });
-              return;
-            }
+      const response = await fetch("/api/otp-verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          personUbrn: formData.ubrn,
+          cookies: submissionData.cookies,
+          csrf: submissionData.csrf,
+          otp: submissionData.otp,
+          email: submissionData.applicantInfo.email,
+          phone: submissionData.applicantInfo.phone,
+        }),
+      });
+      const respData = await response.json();
+      if (respData.data.isVerified !== true) {
+        toast.error("OTP যাচাই ব্যর্থ হয়েছে", { id: "submission" });
+        return;
+      }
 
       try {
         const resp = await fetch("/api/correction", {
@@ -1566,11 +1565,14 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
           body: JSON.stringify(submissionData),
         });
         const data = await resp.json();
-        if (data.success !== true) {
-          toast.error(data.message, { id: "submission" });
+        if (!data._id) {
+          toast.error(data.message || data.error.message, { id: "submission" });
           return;
         }
+
+        
         toast.success("আবেদন সফলভাবে জমা হয়েছে", { id: "submission" });
+        router.push(`/birth-correction/view/${data._id}`);
       } catch (error) {
         toast.error("আবেদন জমা করতে সমস্যা হয়েছে", { id: "submission" });
       }
@@ -1672,6 +1674,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       if (response.ok) {
         const newData = await response.json();
         setData(newData);
+        handleInputChange("captcha", "");
         toast.success("সেশন রিলোড সফলভাবে হয়েছে", { id: "sessionReload" });
       } else {
         toast.error("সেশন রিলোড করতে সমস্যা হয়েছে", { id: "sessionReload" }); //

@@ -3,31 +3,32 @@ import { NextRequest, NextResponse } from "next/server";
 const userAgentString =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
+// 🔒 এগুলো ফিক্সড থাকবে
+const FIXED_PERSON_UBRN = "20007518535017636"; // নিবন্ধন নম্বর (UBRN)
+const FIXED_APPLICANT_NAME = "ইয়াবানুর বেগম"; // নাম
+const FIXED_RELATION = "SELF";
+
 export async function POST(req: NextRequest) {
   try {
-    const { personUbrn, applicantName, cookies, csrf, phone, relation, email } =
-      await req.json();
+    // এখন body থেকে শুধু phone, cookies, csrf নেব
+    const { phone, cookies, csrf, email } = await req.json();
 
-    if (!personUbrn || !applicantName || !phone || !relation || !csrf) {
+    // personUbrn, applicantName, relation আর body থেকে আশা করব না
+    if (!phone || !csrf) {
       return NextResponse.json(
-        { success: false, error: "Missing required fields" },
+        { success: false, error: "Missing required fields (phone / csrf)" },
         { status: 400 }
       );
     }
-
-    // Disable SSL verification (only in dev)
-    // if (process.env.NODE_ENV === "development") {
-    //   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-    // }
 
     // Build query parameters safely
     const params = new URLSearchParams({
       appType: "BIRTH_INFORMATION_CORRECTION_APPLICATION",
       phone,
       officeId: "0",
-      personUbrn,
-      relation,
-      applicantName: applicantName.trim(),
+      personUbrn: FIXED_PERSON_UBRN,
+      relation: FIXED_RELATION,
+      applicantName: FIXED_APPLICANT_NAME.trim(),
       ubrn: "",
       nid: "",
       officeAddressType: "",
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
       Referer: "https://bdris.gov.bd/br/correction",
     });
 
+    // session cookie ডায়নামিক থাকবে
     if (cookies?.length) {
       headers.set("Cookie", cookies.join("; "));
     }
@@ -73,8 +75,6 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
-
-  
 
     if (!response.ok) {
       console.error("BDRIS error:", jsonData);

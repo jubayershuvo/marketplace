@@ -24,15 +24,23 @@ export async function POST(req: NextRequest) {
 
     // Make the request
     const response = await fetch(url, { headers });
-    if (!response.ok) {
-      return NextResponse.json({ success: false, error: "Failed to fetch data" }, { status: 500 });
-    }
+    // if (!response.ok) {
+    //   return NextResponse.json({ success: false, error: "Failed to fetch data" }, { status: 500 });
+    // }
     const jsonData = await response.json(); // JSON response
-    console.log(JSON.stringify(jsonData))
+    if (jsonData.success === false) {
+      return NextResponse.json(
+        { success: false, error: jsonData || "No data found" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({ success: true, data: jsonData[0] });
   } catch (err) {
     console.error("BDRIS request error:", err);
-    return NextResponse.json({ success: false, error: err || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err || "Server error" },
+      { status: 500 }
+    );
   }
 }

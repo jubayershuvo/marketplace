@@ -1,6 +1,8 @@
 // app/api/birth-registration/correction/route.ts
-import fs from "fs";
+import { connectDB } from "@/lib/mongodb";
+import Currection from "@/models/Currection";
 import { NextRequest, NextResponse } from "next/server";
+import fs from "fs";
 import path from "path";
 
 // Define types for the request body
@@ -77,21 +79,18 @@ function isHTML(str: string): boolean {
 async function safeParseResponse(response: Response) {
   const text = await response.text();
 
-  // Fix filename: remove ":" and convert to safe format
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-
   // Ensure the /html directory exists
   const dir = path.join(process.cwd(), "html");
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const filePath = path.join(dir, `${timestamp}.html`);
+  const filePath = path.join(dir, `currection.html`);
 
   // Write file
   await fs.promises.writeFile(filePath, text, "utf8");
 
-  console.log(`HTML page saved to: ${filePath}`);
+  // console.log(`HTML page saved to: ${filePath}`);
   if (isHTML(text)) {
     if (text.includes("OTP NOT VERIFIED")) {
       return {
@@ -99,6 +98,8 @@ async function safeParseResponse(response: Response) {
         message: "OTP not verified. Please check the OTP and try again.",
       };
     }
+
+    const bdrisLink = "https://bdris.gov.bd";
 
     function extractData(html: string) {
       // 1️⃣ Extract ID (inside red span)
@@ -121,7 +122,8 @@ async function safeParseResponse(response: Response) {
         success: !!(applicationId && message && printLink),
         applicationId,
         message,
-        printLink,
+        cookieLink: bdrisLink + "/br/correction",
+        printLink: printLink ? bdrisLink + printLink : null,
       };
     }
 
@@ -176,6 +178,8 @@ export async function POST(request: NextRequest) {
   try {
     const body: CorrectionRequestBody = await request.json();
 
+    await connectDB();
+    const currection = await Currection.create(body);
     // Validate required fields
     if (
       !body.ubrn ||
@@ -495,8 +499,10 @@ export async function POST(request: NextRequest) {
 
     // Use safe parsing to handle HTML responses
     const result = await safeParseResponse(response);
-
-    if (!response.ok) {
+ 
+    if (!result.success) {
+      currection.status = "failed";
+      await currection.save();
       return NextResponse.json(
         {
           success: false,
@@ -505,9 +511,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    currection.status = "submitted";
+    currection.applicationId = result.applicationId;
+    currection.printLink = result.printLink;
+    await currection.save();
 
     // Return the result from external API
-    return NextResponse.json(result);
+    return NextResponse.json(currection);
   } catch (error) {
     console.error("Error processing birth registration correction:", error);
 
