@@ -272,6 +272,7 @@ export async function POST(request: NextRequest) {
     // Handle Permanent Address - ALWAYS include it with proper data
     if (body.isPermAddressIsSameAsBirthPlace && birthPlace && birthPlace.country !== "-1") {
       // Use birth place data for permanent address
+      formData.append("permAddrCorrectionCheckbox", "yes");
       formData.append("permAddrCountry", birthPlace.country);
       formData.append("permAddrDiv", birthPlace.division.toString());
       formData.append("permAddrDist", birthPlace.district.toString());
@@ -312,7 +313,7 @@ export async function POST(request: NextRequest) {
       );
     } else if (permAddress && permAddress.country !== "-1") {
       // Use provided permanent address data
-      formData.append("permAddrCountry", permAddress.country);
+      formData.append("permAddrCorrectionCheckbox", "yes");
       formData.append("permAddrDiv", permAddress.division.toString());
       formData.append("permAddrDist", permAddress.district.toString());
       formData.append(
@@ -375,6 +376,7 @@ export async function POST(request: NextRequest) {
     // Handle Present Address - ALWAYS include it with proper data
     if (body.isPrsntAddressIsSameAsBirthPlace && birthPlace && birthPlace.country !== "-1") {
       // Use birth place data for present address
+      formData.append("prsntAddrCorrectionCheckbox", 'yes');
       formData.append("prsntAddrCountry", birthPlace.country);
       formData.append("prsntAddrDiv", birthPlace.division.toString());
       formData.append("prsntAddrDist", birthPlace.district.toString());
@@ -415,6 +417,7 @@ export async function POST(request: NextRequest) {
       );
     } else if (prsntAddress && prsntAddress.country !== "-1") {
       // Use provided present address data
+      formData.append("prsntAddrCorrectionCheckbox", 'yes');
       formData.append("prsntAddrCountry", prsntAddress.country);
       formData.append("prsntAddrDiv", prsntAddress.division.toString());
       formData.append("prsntAddrDist", prsntAddress.district.toString());
@@ -506,6 +509,7 @@ export async function POST(request: NextRequest) {
 
     // Add the correction info JSON (important!)
     formData.append("correctionInfoJson", JSON.stringify(correctionInfoArray));
+    
 
     console.log("FORM DATA:", Object.fromEntries(formData));
 
