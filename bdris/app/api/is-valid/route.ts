@@ -1,7 +1,8 @@
 // app/api/birth-registration/correction/route.ts
 import { connectDB } from "@/lib/mongodb";
-import Raw from "@/models/Raw";
+import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 
 // Define types for the request body
 interface CorrectionInfo {
@@ -76,12 +77,21 @@ function isHTML(str: string): boolean {
 // Helper function to parse response safely
 async function safeParseResponse(response: Response) {
   const text = await response.text();
-
   if (isHTML(text)) {
-    console.error(
-      "Received HTML response instead of JSON:",
-      text.substring(0, 500)
-    );
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    
+      // Ensure the /html directory exists
+      const dir = path.join(process.cwd(), "html");
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+    
+      const filePath = path.join(dir, `${timestamp}.html`);
+    
+      // Write file
+      await fs.promises.writeFile(filePath, text, "utf8");
+    
+      console.log(`HTML page saved to: ${filePath}`);
 
     // Check for common HTML error patterns
     if (
@@ -128,9 +138,7 @@ async function safeParseResponse(response: Response) {
 export async function POST(request: NextRequest) {
   try {
     const body: CorrectionRequestBody = await request.json();
-await connectDB();
-    const raw = await Raw.create({ raw: JSON.stringify(body) });
-    console.log(raw._id)
+    await connectDB();
 
     // Validate required fields
     if (
@@ -160,7 +168,6 @@ await connectDB();
         { status: 400 }
       );
     }
-
 
     // Build correctionInfoJson array (similar to PHP logic)
     const correctionInfoArray = [];
@@ -423,8 +430,6 @@ await connectDB();
 
     // Add the correction info JSON (important!)
     formData.append("correctionInfoJson", JSON.stringify(correctionInfoArray));
-
-    console.log("Full form data:", Object.fromEntries(formData));
 
     // Prepare headers
     const userAgentString =

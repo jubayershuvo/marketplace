@@ -869,8 +869,8 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   });
 
   const [formData, setFormData] = useState({
-    ubrn: "20010628309028592",
-    dob: "01/03/2001",
+    ubrn: "20021210736113690",
+    dob: "24/03/2002",
     captcha: "",
     relationWithApplicant: "SELF",
     applicantName: "",
@@ -1536,26 +1536,26 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
 
     // Mock API call
     try {
-      const response = await fetch("/api/otp-verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          personUbrn: formData.ubrn,
-          cookies: submissionData.cookies,
-          csrf: submissionData.csrf,
-          otp: submissionData.otp,
-          email: submissionData.applicantInfo.email,
-          phone: submissionData.applicantInfo.phone,
-        }),
-      });
- console.log(JSON.stringify(submissionData))
-      const respData = await response.json();
-      if (respData.data.isVerified !== true) {
-        toast.error("OTP যাচাই ব্যর্থ হয়েছে", { id: "submission" });
-        return;
-      }
+            const response = await fetch("/api/otp-verify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                personUbrn: formData.ubrn,
+                cookies: submissionData.cookies,
+                csrf: submissionData.csrf,
+                otp: submissionData.otp,
+                email: submissionData.applicantInfo.email,
+                phone: submissionData.applicantInfo.phone,
+              }),
+            });
+       console.log(JSON.stringify(submissionData))
+            const respData = await response.json();
+            if (respData.data.isVerified !== true) {
+              toast.error("OTP যাচাই ব্যর্থ হয়েছে", { id: "submission" });
+              return;
+            }
 
       try {
         const resp = await fetch("/api/correction", {
@@ -1567,10 +1567,9 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         });
         const data = await resp.json();
         if (data.success !== true) {
-          toast.error(data.error.message, { id: "submission" });
+          toast.error(data.message, { id: "submission" });
           return;
         }
-        console.log(data);
         toast.success("আবেদন সফলভাবে জমা হয়েছে", { id: "submission" });
       } catch (error) {
         toast.error("আবেদন জমা করতে সমস্যা হয়েছে", { id: "submission" });
@@ -1620,7 +1619,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         isPermAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPermAddr,
         isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
       };
-      console.log(JSON.stringify(submissionData))
+      console.log(JSON.stringify(submissionData));
       toast.loading("OTP পাঠানো হচ্ছে...", { id: "otp" });
       const resp = await fetch("/api/is-valid", {
         method: "POST",
@@ -1655,8 +1654,9 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       if (response.ok) {
         toast.success("OTP সফলভাবে পাঠানো হয়েছে", { id: "otp" });
       } else {
-        toast.error(resData.error.message ||"OTP পাঠাতে সমস্যা হয়েছে", { id: "otp" });
-        
+        toast.error(resData.error.message || "OTP পাঠাতে সমস্যা হয়েছে", {
+          id: "otp",
+        });
       }
     } catch (error) {
       console.log(error);

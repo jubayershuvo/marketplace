@@ -74,6 +74,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
+  
+
     if (!response.ok) {
       console.error("BDRIS error:", jsonData);
       return NextResponse.json(

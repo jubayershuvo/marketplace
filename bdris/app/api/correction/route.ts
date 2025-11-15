@@ -1,6 +1,7 @@
 // app/api/birth-registration/correction/route.ts
-import Raw from "@/models/Raw";
+import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 
 // Define types for the request body
 interface CorrectionInfo {
@@ -75,11 +76,59 @@ function isHTML(str: string): boolean {
 // Helper function to parse response safely
 async function safeParseResponse(response: Response) {
   const text = await response.text();
+
+  // Fix filename: remove ":" and convert to safe format
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+  // Ensure the /html directory exists
+  const dir = path.join(process.cwd(), "html");
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  const filePath = path.join(dir, `${timestamp}.html`);
+
+  // Write file
+  await fs.promises.writeFile(filePath, text, "utf8");
+
+  console.log(`HTML page saved to: ${filePath}`);
   if (isHTML(text)) {
-    console.error(
-      "Received HTML response instead of JSON:",
-      text.substring(0, 500)
-    );
+    if (text.includes("OTP NOT VERIFIED")) {
+      return {
+        success: false,
+        message: "OTP not verified. Please check the OTP and try again.",
+      };
+    }
+
+    function extractData(html: string) {
+      // 1️⃣ Extract ID (inside red span)
+      const idRegex = /<span[^>]*color:red[^>]*>\s*([\d]+)\s*<\/span>/;
+      const idMatch = html.match(idRegex);
+      const applicationId = idMatch ? idMatch[1] : null;
+
+      // 2️⃣ Extract success message (green message)
+      const msgRegex =
+        /<span[^>]*color:green[^>]*>\s*<b>\s*(.*?)\s*<\/b>\s*<\/span>/;
+      const msgMatch = html.match(msgRegex);
+      const message = msgMatch ? msgMatch[1] : null;
+
+      // 3️⃣ Extract print link
+      const printLinkRegex = /<a[^>]*id="appPrintBtn"[^>]*href="([^"]+)"/;
+      const printMatch = html.match(printLinkRegex);
+      const printLink = printMatch ? printMatch[1] : null;
+
+      return {
+        success: !!(applicationId && message && printLink),
+        applicationId,
+        message,
+        printLink,
+      };
+    }
+
+    const extracted = extractData(text);
+    if (extracted.success) {
+      return extracted;
+    }
 
     // Check for common HTML error patterns
     if (
@@ -127,11 +176,6 @@ export async function POST(request: NextRequest) {
   try {
     const body: CorrectionRequestBody = await request.json();
 
-
-
-    const raw = await Raw.findById("69176af7dec48b19eb3f0044");
-    const rawData = raw ? JSON.parse(raw.raw) : null;
-
     // Validate required fields
     if (
       !body.ubrn ||
@@ -161,7 +205,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
 
     // Build correctionInfoJson array (similar to PHP logic)
     const correctionInfoArray = [];
@@ -204,8 +247,7 @@ export async function POST(request: NextRequest) {
     const formData = new FormData();
 
     // Add CSRF token and basic identifiers
-    formData.append("_csrf", rawData.csrf);
-    console.log(rawData.csrf)
+    formData.append("_csrf", body.csrf);
     formData.append("brSearchAliveBrnCorr", body.ubrn);
     formData.append("birthRegisterId", "");
     formData.append("brSearchDob", body.dob);
@@ -427,8 +469,6 @@ export async function POST(request: NextRequest) {
     // Add the correction info JSON (important!)
     formData.append("correctionInfoJson", JSON.stringify(correctionInfoArray));
 
-    console.log("Full form data:", Object.fromEntries(formData));
-
     // Prepare headers
     const userAgentString =
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
@@ -436,7 +476,7 @@ export async function POST(request: NextRequest) {
     const headers = new Headers();
     headers.set("User-Agent", userAgentString);
 
-    if (rawData.cookies?.length) {
+    if (body.cookies?.length) {
       headers.set("Cookie", body.cookies.join("; "));
     }
 
@@ -445,7 +485,7 @@ export async function POST(request: NextRequest) {
     headers.set("X-Csrf-Token", body.csrf);
     headers.set("Referer", "https://bdris.gov.bd/br/correction");
     // Make the request to the external API
-    const apiUrl = "https://bdris.gov.bd/api/br/correction";
+    const apiUrl = "https://bdris.gov.bd/br/correction";
 
     const response = await fetch(apiUrl, {
       method: "POST",
