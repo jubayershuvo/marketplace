@@ -23,7 +23,7 @@ export async function GET(
       );
     }
 
-    const targetURL = application.printLink;
+    const targetURL = application.printLink ||'';
 
     browser = await puppeteer.launch({
       headless: true,
