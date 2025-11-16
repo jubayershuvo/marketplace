@@ -215,11 +215,13 @@ export async function POST(request: NextRequest) {
 
     // Add personal info corrections
     body.correctionInfos.forEach((info) => {
-      correctionInfoArray.push({
-        id: info.key,
-        val: info.value,
-        cause: info.cause || "2",
-      });
+      if (info.key && info.value) {
+        correctionInfoArray.push({
+          id: info.key,
+          val: info.value,
+          cause: info.cause || "2",
+        });
+      }
     });
 
     // Add address corrections
@@ -230,61 +232,60 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "birthPlaceLocationId",
-          val: birthPlace.paurasavaOrUnion.toString(),
+          val: birthPlace.paurasavaOrUnion,
         },
         {
           id: "birthPlaceWardInPaurasavaOrUnion",
-          val: birthPlace.ward.toString(),
+          val: birthPlace.ward,
         },
         {
           id: "birthPlaceEn",
-          val: `${birthPlace.vilAreaTownEn} ${birthPlace.postOfcEn}`.trim(),
+          val: `${birthPlace.houseRoadEn} ${birthPlace.vilAreaTownEn} ${birthPlace.postOfcEn}`.trim(),
         },
         {
           id: "birthPlaceBn",
-          val: `${birthPlace.vilAreaTownBn} ${birthPlace.postOfc}`.trim(),
+          val: `${birthPlace.houseRoadBn} ${birthPlace.vilAreaTownBn} ${birthPlace.postOfc}`.trim(),
         }
       );
     }
     // Present and Permanent addresses
-    if (prsntAddress && prsntAddress.country !== "-1") {
-      correctionInfoArray.push(
-        {
-          id: "prsntAddrLocationId",
-          val: prsntAddress.paurasavaOrUnion.toString(),
-        },
-        {
-          id: "prsntAddrWardInPaurasavaOrUnion",
-          val: prsntAddress.ward.toString(),
-        },
-        {
-          id: "prsntAddrEn",
-          val: `${prsntAddress.vilAreaTownEn} ${prsntAddress.postOfcEn}`.trim(),
-        },
-        {
-          id: "prsntAddrBn",
-          val: `${prsntAddress.vilAreaTownBn} ${prsntAddress.postOfc}`.trim(),
-        }
-      );
-    }
-    
     if (permAddress && permAddress.country !== "-1") {
       correctionInfoArray.push(
         {
           id: "permAddrLocationId",
-          val: permAddress.paurasavaOrUnion.toString(),
+          val: permAddress.paurasavaOrUnion,
         },
         {
           id: "permAddrWardInPaurasavaOrUnion",
-          val: permAddress.ward.toString(),
+          val: permAddress.ward,
         },
         {
           id: "permAddrEn",
-          val: `${permAddress.vilAreaTownEn} ${permAddress.postOfcEn}`.trim(),
+          val: `${permAddress.houseRoadEn} ${permAddress.vilAreaTownEn} ${permAddress.postOfcEn}`.trim(),
         },
         {
           id: "permAddrBn",
-          val: `${permAddress.vilAreaTownBn} ${permAddress.postOfc}`.trim(),
+          val: `${permAddress.houseRoadBn} ${permAddress.vilAreaTownBn} ${permAddress.postOfc}`.trim(),
+        }
+      );
+    }
+    if (prsntAddress && prsntAddress.country !== "-1") {
+      correctionInfoArray.push(
+        {
+          id: "prsntAddrLocationId",
+          val: prsntAddress.paurasavaOrUnion,
+        },
+        {
+          id: "prsntAddrWardInPaurasavaOrUnion",
+          val: prsntAddress.ward,
+        },
+        {
+          id: "prsntAddrEn",
+          val: `${prsntAddress.houseRoadEn} ${prsntAddress.vilAreaTownEn} ${prsntAddress.postOfcEn}`.trim(),
+        },
+        {
+          id: "prsntAddrBn",
+          val: `${prsntAddress.houseRoadBn} ${prsntAddress.vilAreaTownBn} ${prsntAddress.postOfc}`.trim(),
         }
       );
     }
