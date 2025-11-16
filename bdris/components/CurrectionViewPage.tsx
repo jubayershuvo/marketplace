@@ -144,29 +144,12 @@ export default function ViewCorrectionPage({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Field
-                    </label>
-                    <p className="mt-1 text-sm text-gray-900 dark:text-white font-mono bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded border border-gray-200 dark:border-gray-600">
-                      {correction.key}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                       Corrected Value
                     </label>
                     <p className="mt-1 text-sm text-gray-900 dark:text-white font-mono bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded border border-green-200 dark:border-green-800">
                       {correction.value}
                     </p>
                   </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    Correction Cause/Reason
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded border border-yellow-200 dark:border-yellow-800">
-                    {correction.cause}
-                  </p>
                 </div>
               </div>
             ))}
