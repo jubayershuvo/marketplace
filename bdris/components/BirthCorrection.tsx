@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { countriesList } from "@/json/countries";
+import { countriesList, nationalityOptions } from "@/json/countries";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -857,7 +857,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   ]);
 
   const [data, setData] = useState<IData>(InitData);
-const router = useRouter();
+  const router = useRouter();
   // Enhanced address states with better initialization
   const [addresses, setAddresses] = useState<{
     birthPlace: Address;
@@ -870,8 +870,8 @@ const router = useRouter();
   });
 
   const [formData, setFormData] = useState({
-    ubrn: "",
-    dob: "",
+    ubrn: "19882692074041111",
+    dob: "02/10/1988",
     captcha: "",
     relationWithApplicant: "SELF",
     applicantName: "",
@@ -1570,7 +1570,6 @@ const router = useRouter();
           return;
         }
 
-        
         toast.success("আবেদন সফলভাবে জমা হয়েছে", { id: "submission" });
         router.push(`/birth-correction/view/${data._id}`);
       } catch (error) {
@@ -1740,6 +1739,7 @@ const router = useRouter();
                       onChange={(e) =>
                         handleInputChange("ubrn", e.target.value)
                       }
+                      placeholder="UBRN"
                       className="w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                       required
                     />
@@ -2025,28 +2025,164 @@ const router = useRouter();
                           required
                         >
                           <option value="">---নির্বাচন করুন---</option>
-                          {currectionList.map((c) => {
-                            return (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            );
-                          })}
-                        </select>
-                        <input
-                          value={info.value}
-                          onChange={(e) =>
-                            updateCorrectionInfo(
-                              info.id,
-                              "value",
-                              e.target.value
+                          {currectionList
+                            .filter(
+                              (c) =>
+                                // Show all options for the first item or if no other item has selected this option
+                                correctionInfos.length === 1 ||
+                                !correctionInfos.some(
+                                  (otherInfo) =>
+                                    otherInfo.id !== info.id &&
+                                    otherInfo.key === c.id
+                                )
                             )
-                          }
-                          className="px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                          placeholder="চাহিত সংশোধিত তথ্য"
-                          required
-                        />
+                            .map((c) => {
+                              return (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              );
+                            })}
+                        </select>
+
+                        {info.key === "gender" && (
+                          <select
+                            value={info.value}
+                            onChange={(e) =>
+                              updateCorrectionInfo(
+                                info.id,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border rounded w-full mb-4 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                            required
+                          >
+                            <option value="">---লিঙ্গ নির্বাচন করুন---</option>
+                            <option value="MALE">Male</option>
+                            <option value="FEMALE">Female</option>
+                            <option value="THIRD_GENDER">Third Gender</option>
+                          </select>
+                        )}
+
+                        {info.key === "thChild" && (
+                          <select
+                            value={info.value}
+                            onChange={(e) =>
+                              updateCorrectionInfo(
+                                info.id,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border rounded w-full mb-4 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                            required
+                          >
+                            <option value="">---নির্বাচন করুন---</option>
+                            {[...Array(20).keys()].map((i) => (
+                              <option key={i + 1} value={i + 1}>
+                                {i + 1}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {info.key === "personNationality" && (
+                          <select
+                            value={info.value}
+                            onChange={(e) =>
+                              updateCorrectionInfo(
+                                info.id,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border rounded w-full mb-4 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                            required
+                          >
+                            {nationalityOptions.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.value}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {info.key === "fatherNationality" && (
+                          <select
+                            value={info.value}
+                            onChange={(e) =>
+                              updateCorrectionInfo(
+                                info.id,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border rounded w-full mb-4 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                            required
+                          >
+                            {nationalityOptions.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.value}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {info.key === "motherNationality" && (
+                          <select
+                            value={info.value}
+                            onChange={(e) =>
+                              updateCorrectionInfo(
+                                info.id,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border rounded w-full mb-4 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                            required
+                          >
+                            {nationalityOptions.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.value}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {[
+                          "personFirstNameBn",
+                          "personLastNameBn",
+                          "personFirstNameEn",
+                          "personLastNameEn",
+                          "fatherNameBn",
+                          "motherNameBn",
+                          "fatherNameEn",
+                          "motherNameEn",
+                          "personBirthDate",
+                          "personNid",
+                          "passportNumber",
+                        ].includes(info.key) && (
+                          <input
+                            value={info.value}
+                            onChange={(e) =>
+                              updateCorrectionInfo(
+                                info.id,
+                                "value",
+                                e.target.value
+                              )
+                            }
+                            className="px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                            placeholder={
+                              info.key === "personBirthDate"
+                                ? "DD/MM/YYYY"
+                                : "চাহিত সংশোধিত তথ্য"
+                            }
+                            required
+                          />
+                        )}
                       </div>
+
                       {correctionInfos.length > 0 && (
                         <div className="mt-2 text-right">
                           <button
@@ -2060,15 +2196,17 @@ const router = useRouter();
                       )}
                     </div>
                   ))}
-                
-                    <button
-                      type="button"
-                      onClick={addCorrectionInfo}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
-                    >
-                      + আরো তথ্য
-                    </button>
-               
+
+                  <button
+                    type="button"
+                    onClick={addCorrectionInfo}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
+                    disabled={correctionInfos.length >= currectionList.length}
+                  >
+                    + আরো তথ্য{" "}
+                    {correctionInfos.length >= currectionList.length &&
+                      "(সর্বোচ্চ সীমা)"}
+                  </button>
                 </div>
 
                 {/* ---------- Address Section ---------- */}
