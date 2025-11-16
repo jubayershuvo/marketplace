@@ -45,7 +45,7 @@ export default async function BirthCorrectionPage() {
     );
   } catch (error) {
     console.error("Scrape error:", error);
-    return <div>Error scraping data</div>;
+    return <div>BDRIS main server issue</div>;
   } finally {
     if (browser) await browser.close();
   }

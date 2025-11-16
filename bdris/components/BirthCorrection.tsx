@@ -8,12 +8,17 @@ import { useRouter } from "next/navigation";
 /* ─────────────────────────────────────────────────────────────────────────────
    Types
    ──────────────────────────────────────────────────────────────────────────── */
+// Define the type for correction info
 interface CorrectionInfo {
   id: string;
   key: string;
   value: string;
   cause: string;
+  error?: string; // Added error field for validation
 }
+
+// Define the type for the update function
+type UpdateCorrectionInfo = (id: string, field: keyof CorrectionInfo, value: string) => void;
 
 interface Address {
   country: string;
@@ -849,6 +854,68 @@ interface IData {
   csrf: string;
   captcha: { src: string };
 }
+
+// Validation functions
+const validateBanglaText = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+  const banglaRegex = /^[\u0980-\u09FF\s]+$/;
+  if (value && !banglaRegex.test(value)) {
+    updateCorrectionInfo(id, "error", "শুধুমাত্র বাংলা অক্ষর অনুমোদিত");
+  } else {
+    updateCorrectionInfo(id, "error", "");
+  }
+};
+
+const validateEnglishText = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+  const englishRegex = /^[A-Za-z\s]+$/;
+  if (value && !englishRegex.test(value)) {
+    updateCorrectionInfo(id, "error", "Only English letters are allowed");
+  } else {
+    updateCorrectionInfo(id, "error", "");
+  }
+};
+
+const validateBirthDate = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+  const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+  if (value && !dateRegex.test(value)) {
+    updateCorrectionInfo(id, "error", "Date must be in DD/MM/YYYY format");
+    return;
+  }
+
+  // Additional date validation
+  if (value) {
+    const [day, month, year] = value.split('/').map(Number);
+    const date = new Date(year, month - 1, day);
+    
+    if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+      updateCorrectionInfo(id, "error", "Please enter a valid date");
+    } else {
+      updateCorrectionInfo(id, "error", "");
+    }
+  } else {
+    updateCorrectionInfo(id, "error", "");
+  }
+};
+
+const validateNID = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+  const nidRegex = /^\d+$/;
+  if (value && !nidRegex.test(value)) {
+    updateCorrectionInfo(id, "error", "NID must contain only numbers");
+  } else if (value && value.length !== 10 && value.length !== 13 && value.length !== 17) {
+    updateCorrectionInfo(id, "error", "NID must be 10, 13, or 17 digits");
+  } else {
+    updateCorrectionInfo(id, "error", "");
+  }
+};
+
+const validatePassport = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+  const passportRegex = /^[A-Z0-9<]+$/;
+  if (value && !passportRegex.test(value)) {
+    updateCorrectionInfo(id, "error", "Only capital English letters, numbers and < symbol are allowed");
+  } else {
+    updateCorrectionInfo(id, "error", "");
+  }
+};
+
 export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   /* ── Basic states ─────────────────────────────────────────────────────── */
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -1472,6 +1539,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     field: keyof CorrectionInfo,
     value: string
   ) => {
+    console.log(id, field, value);
     setCorrectionInfos((p) =>
       p.map((i) => (i.id === id ? { ...i, [field]: value } : i))
     );
@@ -1927,81 +1995,6 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                   </div>
                 </div>
 
-                {/* ---------- Address Selection Status ---------- */}
-                {/* <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                  <h3 className="text-lg font-semibold mb-4 text-yellow-800 dark:text-yellow-400">
-                    ঠিকানা নির্বাচন স্ট্যাটাস
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div
-                      className={`p-4 rounded-lg border ${
-                        isBirthPlaceSelected
-                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                      }`}
-                    >
-                      <div className="font-medium text-gray-800 dark:text-gray-200">
-                        জন্মস্থানের ঠিকানা
-                      </div>
-                      <div
-                        className={`text-sm ${
-                          isBirthPlaceSelected
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {isBirthPlaceSelected
-                          ? "✓ নির্বাচন করা হয়েছে"
-                          : "✗ নির্বাচন করা হয়নি"}
-                      </div>
-                    </div>
-                    <div
-                      className={`p-4 rounded-lg border ${
-                        isPermAddressSelected
-                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                      }`}
-                    >
-                      <div className="font-medium text-gray-800 dark:text-gray-200">
-                        স্থায়ী ঠিকানা
-                      </div>
-                      <div
-                        className={`text-sm ${
-                          isPermAddressSelected
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {isPermAddressSelected
-                          ? "✓ নির্বাচন করা হয়েছে"
-                          : "✗ নির্বাচন করা হয়নি"}
-                      </div>
-                    </div>
-                    <div
-                      className={`p-4 rounded-lg border ${
-                        isPrsntAddressSelected
-                          ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-                          : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                      }`}
-                    >
-                      <div className="font-medium text-gray-800 dark:text-gray-200">
-                        বর্তমান ঠিকানা
-                      </div>
-                      <div
-                        className={`text-sm ${
-                          isPrsntAddressSelected
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {isPrsntAddressSelected
-                          ? "✓ নির্বাচন করা হয়েছে"
-                          : "✗ নির্বাচন করা হয়নি"}
-                      </div>
-                    </div>
-                  </div>
-                </div> */}
-
                 {/* ---------- Correction Infos ---------- */}
                 <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border dark:border-gray-700">
                   <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
@@ -2028,7 +2021,6 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                           {currectionList
                             .filter(
                               (c) =>
-                                // Show all options for the first item or if no other item has selected this option
                                 correctionInfos.length === 1 ||
                                 !correctionInfos.some(
                                   (otherInfo) =>
@@ -2153,33 +2145,161 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                         {[
                           "personFirstNameBn",
                           "personLastNameBn",
-                          "personFirstNameEn",
-                          "personLastNameEn",
                           "fatherNameBn",
                           "motherNameBn",
+                        ].includes(info.key) && (
+                          <div>
+                            <input
+                              value={info.value}
+                              onChange={(e) =>
+                                updateCorrectionInfo(
+                                  info.id,
+                                  "value",
+                                  e.target.value
+                                )
+                              }
+                              onBlur={(e) =>
+                                validateBanglaText(info.id, e.target.value, updateCorrectionInfo)
+                              }
+                              className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
+                                info.error
+                                  ? "border-red-500 dark:border-red-400"
+                                  : ""
+                              }`}
+                              placeholder="চাহিত সংশোধিত তথ্য"
+                              required
+                            />
+                            {info.error && (
+                              <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+                                {info.error}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {[
+                          "personFirstNameEn",
+                          "personLastNameEn",
                           "fatherNameEn",
                           "motherNameEn",
-                          "personBirthDate",
-                          "personNid",
-                          "passportNumber",
                         ].includes(info.key) && (
-                          <input
-                            value={info.value}
-                            onChange={(e) =>
-                              updateCorrectionInfo(
-                                info.id,
-                                "value",
-                                e.target.value
-                              )
-                            }
-                            className="px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white"
-                            placeholder={
-                              info.key === "personBirthDate"
-                                ? "DD/MM/YYYY"
-                                : "চাহিত সংশোধিত তথ্য"
-                            }
-                            required
-                          />
+                          <div>
+                            <input
+                              value={info.value}
+                              onChange={(e) =>
+                                updateCorrectionInfo(
+                                  info.id,
+                                  "value",
+                                  e.target.value
+                                )
+                              }
+                              onBlur={(e) =>
+                                validateEnglishText(info.id, e.target.value, updateCorrectionInfo)
+                              }
+                              className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
+                                info.error
+                                  ? "border-red-500 dark:border-red-400"
+                                  : ""
+                              }`}
+                              placeholder="Enter corrected information"
+                              required
+                            />
+                            {info.error && (
+                              <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+                                {info.error}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {info.key === "personBirthDate" && (
+                          <div>
+                            <input
+                              value={info.value}
+                              onChange={(e) =>
+                                updateCorrectionInfo(
+                                  info.id,
+                                  "value",
+                                  e.target.value
+                                )
+                              }
+                              onBlur={(e) =>
+                                validateBirthDate(info.id, e.target.value, updateCorrectionInfo)
+                              }
+                              className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
+                                info.error
+                                  ? "border-red-500 dark:border-red-400"
+                                  : ""
+                              }`}
+                              placeholder="DD/MM/YYYY"
+                              required
+                            />
+                            {info.error && (
+                              <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+                                {info.error}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {info.key === "personNid" && (
+                          <div>
+                            <input
+                              value={info.value}
+                              onChange={(e) =>
+                                updateCorrectionInfo(
+                                  info.id,
+                                  "value",
+                                  e.target.value
+                                )
+                              }
+                              onBlur={(e) =>
+                                validateNID(info.id, e.target.value, updateCorrectionInfo)
+                              }
+                              className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
+                                info.error
+                                  ? "border-red-500 dark:border-red-400"
+                                  : ""
+                              }`}
+                              placeholder="Enter NID number"
+                              required
+                            />
+                            {info.error && (
+                              <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+                                {info.error}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {info.key === "passportNumber" && (
+                          <div>
+                            <input
+                              value={info.value}
+                              onChange={(e) =>
+                                updateCorrectionInfo(
+                                  info.id,
+                                  "value",
+                                  e.target.value
+                                )
+                              }
+                              onBlur={(e) =>
+                                validatePassport(info.id, e.target.value, updateCorrectionInfo)
+                              }
+                              className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
+                                info.error
+                                  ? "border-red-500 dark:border-red-400"
+                                  : ""
+                              }`}
+                              placeholder="Enter passport number"
+                              required
+                            />
+                            {info.error && (
+                              <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+                                {info.error}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
 
