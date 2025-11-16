@@ -250,19 +250,19 @@ export async function POST(request: NextRequest) {
     if (prsntAddress && prsntAddress.country !== "-1") {
       correctionInfoArray.push(
         {
-          id: "presentLocationId",
+          id: "prsntAddrLocationId",
           val: prsntAddress.paurasavaOrUnion.toString(),
         },
         {
-          id: "presentWardInPaurasavaOrUnion",
+          id: "prsntAddrWardInPaurasavaOrUnion",
           val: prsntAddress.ward.toString(),
         },
         {
-          id: "presentEn",
+          id: "prsntAddrEn",
           val: `${prsntAddress.vilAreaTownEn} ${prsntAddress.postOfcEn}`.trim(),
         },
         {
-          id: "presentBn",
+          id: "prsntAddrBn",
           val: `${prsntAddress.vilAreaTownBn} ${prsntAddress.postOfc}`.trim(),
         }
       );
@@ -270,19 +270,19 @@ export async function POST(request: NextRequest) {
     if (permAddress && permAddress.country !== "-1") {
       correctionInfoArray.push(
         {
-          id: "permLocationId",
+          id: "permAddrLocationId",
           val: permAddress.paurasavaOrUnion.toString(),
         },
         {
-          id: "permWardInPaurasavaOrUnion",
+          id: "permAddrWardInPaurasavaOrUnion",
           val: permAddress.ward.toString(),
         },
         {
-          id: "permEn",
+          id: "permAddrEn",
           val: `${permAddress.vilAreaTownEn} ${permAddress.postOfcEn}`.trim(),
         },
         {
-          id: "permBn",
+          id: "permAddrBn",
           val: `${permAddress.vilAreaTownBn} ${permAddress.postOfc}`.trim(),
         }
       );
