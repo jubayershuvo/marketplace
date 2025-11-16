@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle Permanent Address - ALWAYS include it with proper data
-    if (body.isPermAddressIsSameAsBirthPlace && birthPlace && birthPlace.country !== "-1") {
+     if (body.isPermAddressIsSameAsBirthPlace && birthPlace && birthPlace.country !== "-1") {
       // Use birth place data for permanent address
       formData.append("permAddrCorrectionCheckbox", "yes");
       formData.append("permAddrCountry", birthPlace.country);
