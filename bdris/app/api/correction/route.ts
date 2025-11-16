@@ -247,6 +247,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (prsntAddress && prsntAddress.country !== "-1") {
+      correctionInfoArray.push(
+        {
+          id: "presentLocationId",
+          val: prsntAddress.paurasavaOrUnion.toString(),
+        },
+        {
+          id: "presentWardInPaurasavaOrUnion",
+          val: prsntAddress.ward.toString(),
+        },
+        {
+          id: "presentEn",
+          val: `${prsntAddress.vilAreaTownEn} ${prsntAddress.postOfcEn}`.trim(),
+        },
+        {
+          id: "presentBn",
+          val: `${prsntAddress.vilAreaTownBn} ${prsntAddress.postOfc}`.trim(),
+        }
+      );
+    }
+    if (permAddress && permAddress.country !== "-1") {
+      correctionInfoArray.push(
+        {
+          id: "permLocationId",
+          val: permAddress.paurasavaOrUnion.toString(),
+        },
+        {
+          id: "permWardInPaurasavaOrUnion",
+          val: permAddress.ward.toString(),
+        },
+        {
+          id: "permEn",
+          val: `${permAddress.vilAreaTownEn} ${permAddress.postOfcEn}`.trim(),
+        },
+        {
+          id: "permBn",
+          val: `${permAddress.vilAreaTownBn} ${permAddress.postOfc}`.trim(),
+        }
+      );
+    }
+
     // Prepare FormData
     const formData = new FormData();
 
