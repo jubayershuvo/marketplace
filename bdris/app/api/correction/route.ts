@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
         }
       );
     }
-
+    // Present and Permanent addresses
     if (prsntAddress && prsntAddress.country !== "-1") {
       correctionInfoArray.push(
         {
@@ -267,6 +267,7 @@ export async function POST(request: NextRequest) {
         }
       );
     }
+    
     if (permAddress && permAddress.country !== "-1") {
       correctionInfoArray.push(
         {
