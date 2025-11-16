@@ -14,6 +14,7 @@ interface ISendData {
   id: string;
   ubrn: string;
   dob: string;
+  applicationId: string;
   currectionInfos: ICorrectionInfo[];
 }
 
@@ -25,9 +26,7 @@ export default async function ViewPage({
   const { id } = await params;
 
   await connectDB();
-  const countDoc = await Currection.countDocuments();
   const application = await Currection.findById(id).lean();
-  console.log(countDoc)
   
   if (!application) {
     // For page components, you should return JSX, not NextResponse
@@ -47,6 +46,7 @@ export default async function ViewPage({
     id: id,
     ubrn: application.ubrn ? application.ubrn.toString() : '',
     dob: application.dob ? application.dob.toString() : '',
+    applicationId: application.applicationId ? application.applicationId.toString() : '',
     currectionInfos: (application.correctionInfos || []).map((info) => ({
       id: info.id?.toString() || '',
       key: info.key?.toString() || '',
