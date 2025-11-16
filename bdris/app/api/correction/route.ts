@@ -67,7 +67,7 @@ interface CorrectionRequestBody {
   csrf: string;
   cookies: string[];
   isPermAddressIsSameAsBirthPlace: boolean;
-  isPrsntAddressIsSameAsBirthPlace: boolean;
+  isPrsntAddressIsSameAsPermAddress: boolean;
 }
 
 // Helper function to check if string is HTML
@@ -288,31 +288,43 @@ export async function POST(request: NextRequest) {
         "birthPlaceWardInPaurasavaOrUnion",
         birthPlace.ward.toString()
       );
-      
+
       // Add ALL birth place address fields
       formData.append("birthPlacePostOfc", birthPlace.postOfc || "");
       formData.append("birthPlacePostOfcEn", birthPlace.postOfcEn || "");
-      formData.append("birthPlaceVilAreaTownBn", birthPlace.vilAreaTownBn || "");
-      formData.append("birthPlaceVilAreaTownEn", birthPlace.vilAreaTownEn || "");
+      formData.append(
+        "birthPlaceVilAreaTownBn",
+        birthPlace.vilAreaTownBn || ""
+      );
+      formData.append(
+        "birthPlaceVilAreaTownEn",
+        birthPlace.vilAreaTownEn || ""
+      );
       formData.append("birthPlaceHouseRoadBn", birthPlace.houseRoadBn || "");
       formData.append("birthPlaceHouseRoadEn", birthPlace.houseRoadEn || "");
       formData.append("birthPlacePostCode", "");
       formData.append(
         "birthPlaceLocationId",
-        birthPlace.geoId !== "0" ? birthPlace.geoId : birthPlace.paurasavaOrUnion.toString()
+        birthPlace.geoId !== "0"
+          ? birthPlace.geoId
+          : birthPlace.paurasavaOrUnion.toString()
       );
       formData.append(
         "birthPlaceEn",
-        `${birthPlace.vilAreaTownEn || ''} ${birthPlace.postOfcEn || ''}`.trim() || ""
+        `${birthPlace.vilAreaTownEn || ""} ${
+          birthPlace.postOfcEn || ""
+        }`.trim() || ""
       );
       formData.append(
         "birthPlaceBn",
-        `${birthPlace.vilAreaTownBn || ''} ${birthPlace.postOfc || ''}`.trim() || ""
+        `${birthPlace.vilAreaTownBn || ""} ${
+          birthPlace.postOfc || ""
+        }`.trim() || ""
       );
     }
 
     // Handle Permanent Address - ALWAYS include it with proper data
-     if (body.isPermAddressIsSameAsBirthPlace && birthPlace && birthPlace.country !== "-1") {
+    if (birthPlace && birthPlace.country !== "-1") {
       // Use birth place data for permanent address
       formData.append("permAddrCorrectionCheckbox", "yes");
       formData.append("permAddrCountry", birthPlace.country);
@@ -332,7 +344,7 @@ export async function POST(request: NextRequest) {
         "permAddrWardInPaurasavaOrUnion",
         birthPlace.ward.toString()
       );
-      
+
       // Add ALL permanent address fields
       formData.append("permAddrPostOfc", birthPlace.postOfc || "");
       formData.append("permAddrPostOfcEn", birthPlace.postOfcEn || "");
@@ -343,82 +355,28 @@ export async function POST(request: NextRequest) {
       formData.append("permAddrPostCode", "");
       formData.append(
         "permAddrLocationId",
-        birthPlace.geoId !== "0" ? birthPlace.geoId : birthPlace.paurasavaOrUnion.toString()
+        birthPlace.geoId !== "0"
+          ? birthPlace.geoId
+          : birthPlace.paurasavaOrUnion.toString()
       );
       formData.append(
         "permAddrEn",
-        `${birthPlace.vilAreaTownEn || ''} ${birthPlace.postOfcEn || ''}`.trim() || ""
+        `${birthPlace.vilAreaTownEn || ""} ${
+          birthPlace.postOfcEn || ""
+        }`.trim() || ""
       );
       formData.append(
         "permAddrBn",
-        `${birthPlace.vilAreaTownBn || ''} ${birthPlace.postOfc || ''}`.trim() || ""
+        `${birthPlace.vilAreaTownBn || ""} ${
+          birthPlace.postOfc || ""
+        }`.trim() || ""
       );
-    } else if (permAddress && permAddress.country !== "-1") {
-      // Use provided permanent address data
-      formData.append("permAddrCorrectionCheckbox", "yes");
-      formData.append("permAddrDiv", permAddress.division.toString());
-      formData.append("permAddrDist", permAddress.district.toString());
-      formData.append(
-        "permAddrCityCorpCantOrUpazila",
-        permAddress.cityCorpCantOrUpazila.toString()
-      );
-      formData.append(
-        "permAddrPaurasavaOrUnion",
-        permAddress.paurasavaOrUnion.toString()
-      );
-      formData.append("permAddrWardInCityCorp", "-1");
-      formData.append("permAddrArea", "-1");
-      formData.append(
-        "permAddrWardInPaurasavaOrUnion",
-        permAddress.ward.toString()
-      );
-      
-      // Add ALL permanent address fields
-      formData.append("permAddrPostOfc", permAddress.postOfc || "");
-      formData.append("permAddrPostOfcEn", permAddress.postOfcEn || "");
-      formData.append("permAddrVilAreaTownBn", permAddress.vilAreaTownBn || "");
-      formData.append("permAddrVilAreaTownEn", permAddress.vilAreaTownEn || "");
-      formData.append("permAddrHouseRoadBn", permAddress.houseRoadBn || "");
-      formData.append("permAddrHouseRoadEn", permAddress.houseRoadEn || "");
-      formData.append("permAddrPostCode", "");
-      formData.append(
-        "permAddrLocationId",
-        permAddress.geoId !== "0" ? permAddress.geoId : permAddress.paurasavaOrUnion.toString()
-      );
-      formData.append(
-        "permAddrEn",
-        `${permAddress.vilAreaTownEn || ''} ${permAddress.postOfcEn || ''}`.trim() || ""
-      );
-      formData.append(
-        "permAddrBn",
-        `${permAddress.vilAreaTownBn || ''} ${permAddress.postOfc || ''}`.trim() || ""
-      );
-    } else {
-      // Set default values for permanent address
-      formData.append("permAddrCountry", "-1");
-      formData.append("permAddrDiv", "");
-      formData.append("permAddrDist", "");
-      formData.append("permAddrCityCorpCantOrUpazila", "");
-      formData.append("permAddrPaurasavaOrUnion", "");
-      formData.append("permAddrWardInCityCorp", "");
-      formData.append("permAddrArea", "");
-      formData.append("permAddrWardInPaurasavaOrUnion", "");
-      formData.append("permAddrPostOfc", "");
-      formData.append("permAddrPostOfcEn", "");
-      formData.append("permAddrVilAreaTownBn", "");
-      formData.append("permAddrVilAreaTownEn", "");
-      formData.append("permAddrHouseRoadBn", "");
-      formData.append("permAddrHouseRoadEn", "");
-      formData.append("permAddrPostCode", "");
-      formData.append("permAddrLocationId", "");
-      formData.append("permAddrEn", "");
-      formData.append("permAddrBn", "");
     }
 
     // Handle Present Address - ALWAYS include it with proper data
-    if (body.isPrsntAddressIsSameAsBirthPlace && birthPlace && birthPlace.country !== "-1") {
+    if (birthPlace && birthPlace.country !== "-1") {
       // Use birth place data for present address
-      formData.append("prsntAddrCorrectionCheckbox", 'yes');
+      formData.append("prsntAddrCorrectionCheckbox", "yes");
       formData.append("prsntAddrCountry", birthPlace.country);
       formData.append("prsntAddrDiv", birthPlace.division.toString());
       formData.append("prsntAddrDist", birthPlace.district.toString());
@@ -436,7 +394,7 @@ export async function POST(request: NextRequest) {
         "prsntAddrWardInPaurasavaOrUnion",
         birthPlace.ward.toString()
       );
-      
+
       // Add ALL present address fields
       formData.append("prsntAddrPostOfc", birthPlace.postOfc || "");
       formData.append("prsntAddrPostOfcEn", birthPlace.postOfcEn || "");
@@ -447,78 +405,31 @@ export async function POST(request: NextRequest) {
       formData.append("prsntAddrPostCode", "");
       formData.append(
         "prsntAddrLocationId",
-        birthPlace.geoId !== "0" ? birthPlace.geoId : birthPlace.paurasavaOrUnion.toString()
+        birthPlace.geoId !== "0"
+          ? birthPlace.geoId
+          : birthPlace.paurasavaOrUnion.toString()
       );
       formData.append(
         "prsntAddrEn",
-        `${birthPlace.vilAreaTownEn || ''} ${birthPlace.postOfcEn || ''}`.trim() || ""
+        `${birthPlace.vilAreaTownEn || ""} ${
+          birthPlace.postOfcEn || ""
+        }`.trim() || ""
       );
       formData.append(
         "prsntAddrBn",
-        `${birthPlace.vilAreaTownBn || ''} ${birthPlace.postOfc || ''}`.trim() || ""
+        `${birthPlace.vilAreaTownBn || ""} ${
+          birthPlace.postOfc || ""
+        }`.trim() || ""
       );
-    } else if (prsntAddress && prsntAddress.country !== "-1") {
-      // Use provided present address data
-      formData.append("prsntAddrCorrectionCheckbox", 'yes');
-      formData.append("prsntAddrCountry", prsntAddress.country);
-      formData.append("prsntAddrDiv", prsntAddress.division.toString());
-      formData.append("prsntAddrDist", prsntAddress.district.toString());
-      formData.append(
-        "prsntAddrCityCorpCantOrUpazila",
-        prsntAddress.cityCorpCantOrUpazila.toString()
-      );
-      formData.append(
-        "prsntAddrPaurasavaOrUnion",
-        prsntAddress.paurasavaOrUnion.toString()
-      );
-      formData.append("prsntAddrWardInCityCorp", "-1");
-      formData.append("prsntAddrArea", "-1");
-      formData.append(
-        "prsntAddrWardInPaurasavaOrUnion",
-        prsntAddress.ward.toString()
-      );
-      
-      // Add ALL present address fields
-      formData.append("prsntAddrPostOfc", prsntAddress.postOfc || "");
-      formData.append("prsntAddrPostOfcEn", prsntAddress.postOfcEn || "");
-      formData.append("prsntAddrVilAreaTownBn", prsntAddress.vilAreaTownBn || "");
-      formData.append("prsntAddrVilAreaTownEn", prsntAddress.vilAreaTownEn || "");
-      formData.append("prsntAddrHouseRoadBn", prsntAddress.houseRoadBn || "");
-      formData.append("prsntAddrHouseRoadEn", prsntAddress.houseRoadEn || "");
-      formData.append("prsntAddrPostCode", "");
-      formData.append(
-        "prsntAddrLocationId",
-        prsntAddress.geoId !== "0" ? prsntAddress.geoId : prsntAddress.paurasavaOrUnion.toString()
-      );
-      formData.append(
-        "prsntAddrEn",
-        `${prsntAddress.vilAreaTownEn || ''} ${prsntAddress.postOfcEn || ''}`.trim() || ""
-      );
-      formData.append(
-        "prsntAddrBn",
-        `${prsntAddress.vilAreaTownBn || ''} ${prsntAddress.postOfc || ''}`.trim() || ""
-      );
-    } else {
-      // Set default values for present address
-      formData.append("prsntAddrCountry", "-1");
-      formData.append("prsntAddrDiv", "");
-      formData.append("prsntAddrDist", "");
-      formData.append("prsntAddrCityCorpCantOrUpazila", "");
-      formData.append("prsntAddrPaurasavaOrUnion", "");
-      formData.append("prsntAddrWardInCityCorp", "");
-      formData.append("prsntAddrArea", "");
-      formData.append("prsntAddrWardInPaurasavaOrUnion", "");
-      formData.append("prsntAddrPostOfc", "");
-      formData.append("prsntAddrPostOfcEn", "");
-      formData.append("prsntAddrVilAreaTownBn", "");
-      formData.append("prsntAddrVilAreaTownEn", "");
-      formData.append("prsntAddrHouseRoadBn", "");
-      formData.append("prsntAddrHouseRoadEn", "");
-      formData.append("prsntAddrPostCode", "");
-      formData.append("prsntAddrLocationId", "");
-      formData.append("prsntAddrEn", "");
-      formData.append("prsntAddrBn", "");
     }
+    formData.append(
+      "copyBirthPlaceToPermAddr",
+      body.isPermAddressIsSameAsBirthPlace ? "yes" : "no"
+    );
+    formData.append(
+      "copyPermAddrToPrsntAddr",
+      body.isPrsntAddressIsSameAsPermAddress ? "yes" : "no"
+    );
     // Add files/attachments
     if (body.files && body.files.length > 0) {
       body.files.forEach((file) => {
@@ -577,7 +488,7 @@ export async function POST(request: NextRequest) {
 
     // Use safe parsing to handle HTML responses
     const result = await safeParseResponse(response);
- 
+
     if (!result.success) {
       currection.submit_status = "failed";
       await currection.save();

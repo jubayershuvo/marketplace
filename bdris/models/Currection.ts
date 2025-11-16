@@ -115,7 +115,7 @@ export interface IBdrisApplication {
   csrf?: string;
   cookies?: string[];
   isPermAddressIsSameAsBirthPlace?: boolean;
-  isPrsntAddressIsSameAsBirthPlace?: boolean;
+  isPrsntAddressIsSameAsPermAddress?: boolean;
 }
 
 /* ---------------- Main Schema ---------------- */
@@ -148,7 +148,7 @@ const bdrisApplicationSchema = new Schema<IBdrisApplication>(
     cookies: { type: [String], default: [] },
 
     isPermAddressIsSameAsBirthPlace: { type: Boolean, default: false },
-    isPrsntAddressIsSameAsBirthPlace: { type: Boolean, default: false },
+    isPrsntAddressIsSameAsPermAddress: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

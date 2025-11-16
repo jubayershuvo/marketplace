@@ -946,7 +946,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     phone: "",
     otp: "",
     copyBirthPlaceToPermAddr: false,
-    copyBirthPlaceToPrsntAddr: false,
+    copyPermAddrToPrsntAddr: false,
   });
 
   const [birthRecord, setBirthRecord] = useState<BirthRecord | null>(null);
@@ -1150,7 +1150,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     closeAddressModal();
   };
 
-  // Handle checkbox changes to ALWAYS copy from birthPlace when checked, and remove address when unchecked
+  // Handle checkbox changes with proper sequence: Birth Place → Permanent Address → Present Address
   const handleCheckboxChange = (
     field: keyof typeof formData,
     checked: boolean
@@ -1159,19 +1159,27 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
 
     if (checked) {
       if (field === "copyBirthPlaceToPermAddr") {
-        // ALWAYS copy from birthPlace to permAddress
+        // Copy from birthPlace to permAddress
         setAddresses((prev) => ({
           ...prev,
           permAddress: { ...prev.birthPlace },
         }));
         toast.success("জন্মস্থানের ঠিকানা স্থায়ী ঠিকানায় কপি করা হয়েছে");
-      } else if (field === "copyBirthPlaceToPrsntAddr") {
-        // ALWAYS copy from birthPlace to prsntAddress (not from permAddress)
+        
+        // If perm address to present address is already checked, also update present address
+        if (formData.copyPermAddrToPrsntAddr) {
+          setAddresses((prev) => ({
+            ...prev,
+            prsntAddress: { ...prev.birthPlace },
+          }));
+        }
+      } else if (field === "copyPermAddrToPrsntAddr") {
+        // Copy from permAddress to prsntAddress
         setAddresses((prev) => ({
           ...prev,
-          prsntAddress: { ...prev.birthPlace },
+          prsntAddress: { ...prev.permAddress },
         }));
-        toast.success("জন্মস্থানের ঠিকানা বর্তমান ঠিকানায় কপি করা হয়েছে");
+        toast.success("স্থায়ী ঠিকানা বর্তমান ঠিকানায় কপি করা হয়েছে");
       }
     } else {
       // Remove address when unchecked
@@ -1181,7 +1189,16 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
           permAddress: createEmptyAddress(),
         }));
         toast.success("স্থায়ী ঠিকানা সরানো হয়েছে");
-      } else if (field === "copyBirthPlaceToPrsntAddr") {
+        
+        // Also uncheck and clear present address if it was dependent
+        if (formData.copyPermAddrToPrsntAddr) {
+          setFormData((prev) => ({ ...prev, copyPermAddrToPrsntAddr: false }));
+          setAddresses((prev) => ({
+            ...prev,
+            prsntAddress: createEmptyAddress(),
+          }));
+        }
+      } else if (field === "copyPermAddrToPrsntAddr") {
         setAddresses((prev) => ({
           ...prev,
           prsntAddress: createEmptyAddress(),
@@ -1202,8 +1219,12 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     // Also uncheck checkboxes if clearing addresses
     if (type === "permAddress") {
       setFormData((prev) => ({ ...prev, copyBirthPlaceToPermAddr: false }));
+      // Also uncheck present address if it was dependent on permanent address
+      if (formData.copyPermAddrToPrsntAddr) {
+        setFormData((prev) => ({ ...prev, copyPermAddrToPrsntAddr: false }));
+      }
     } else if (type === "prsntAddress") {
-      setFormData((prev) => ({ ...prev, copyBirthPlaceToPrsntAddr: false }));
+      setFormData((prev) => ({ ...prev, copyPermAddrToPrsntAddr: false }));
     }
   };
 
@@ -1552,7 +1573,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   ) => {
     if (
       field === "copyBirthPlaceToPermAddr" ||
-      field === "copyBirthPlaceToPrsntAddr"
+      field === "copyPermAddrToPrsntAddr"
     ) {
       handleCheckboxChange(field, value as boolean);
     } else {
@@ -1600,7 +1621,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       csrf: data.csrf,
       cookies: data.cookies,
       isPermAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPermAddr,
-      isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
+      isPrsntAddressIsSameAsPermAddress: formData.copyPermAddrToPrsntAddr,
     };
 
     try {
@@ -1686,7 +1707,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         csrf: data.csrf,
         cookies: data.cookies,
         isPermAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPermAddr,
-        isPrsntAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPrsntAddr,
+        isPrsntAddressIsSameAsPermAddress: formData.copyPermAddrToPrsntAddr,
       };
       console.log(JSON.stringify(submissionData));
       toast.loading("OTP পাঠানো হচ্ছে...", { id: "otp" });
@@ -2375,21 +2396,21 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                   <div className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      id="copyBirthPlaceToPrsntAddr"
-                      checked={formData.copyBirthPlaceToPrsntAddr}
+                      id="copyPermAddrToPrsntAddr"
+                      checked={formData.copyPermAddrToPrsntAddr}
                       onChange={(e) =>
                         handleInputChange(
-                          "copyBirthPlaceToPrsntAddr",
+                          "copyPermAddrToPrsntAddr",
                           e.target.checked
                         )
                       }
                       className="rounded dark:bg-gray-700 dark:border-gray-600"
                     />
                     <label
-                      htmlFor="copyBirthPlaceToPrsntAddr"
+                      htmlFor="copyPermAddrToPrsntAddr"
                       className="text-sm text-gray-700 dark:text-gray-300"
                     >
-                      জন্মস্থানের ঠিকানা বর্তমান ঠিকানায় কপি করুন
+                      স্থায়ী ঠিকানা বর্তমান ঠিকানায় কপি করুন
                     </label>
                   </div>
 
