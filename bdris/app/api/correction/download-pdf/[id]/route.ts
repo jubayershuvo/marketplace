@@ -144,7 +144,6 @@ export async function GET(
       );
     });
 
-    console.log(`Generating PDF with calculated height: ${scrollHeight}px`);
 
     // Generate PDF
     const pdfBuffer = await page.pdf({

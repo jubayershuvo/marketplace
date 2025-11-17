@@ -18,7 +18,11 @@ interface CorrectionInfo {
 }
 
 // Define the type for the update function
-type UpdateCorrectionInfo = (id: string, field: keyof CorrectionInfo, value: string) => void;
+type UpdateCorrectionInfo = (
+  id: string,
+  field: keyof CorrectionInfo,
+  value: string
+) => void;
 
 interface Address {
   country: string;
@@ -856,7 +860,11 @@ interface IData {
 }
 
 // Validation functions
-const validateBanglaText = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+const validateBanglaText = (
+  id: string,
+  value: string,
+  updateCorrectionInfo: UpdateCorrectionInfo
+): void => {
   const banglaRegex = /^[\u0980-\u09FF\s]+$/;
   if (value && !banglaRegex.test(value)) {
     updateCorrectionInfo(id, "error", "শুধুমাত্র বাংলা অক্ষর অনুমোদিত");
@@ -865,7 +873,11 @@ const validateBanglaText = (id: string, value: string, updateCorrectionInfo: Upd
   }
 };
 
-const validateEnglishText = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+const validateEnglishText = (
+  id: string,
+  value: string,
+  updateCorrectionInfo: UpdateCorrectionInfo
+): void => {
   const englishRegex = /^[A-Za-z\s]+$/;
   if (value && !englishRegex.test(value)) {
     updateCorrectionInfo(id, "error", "Only English letters are allowed");
@@ -874,7 +886,11 @@ const validateEnglishText = (id: string, value: string, updateCorrectionInfo: Up
   }
 };
 
-const validateBirthDate = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+const validateBirthDate = (
+  id: string,
+  value: string,
+  updateCorrectionInfo: UpdateCorrectionInfo
+): void => {
   const dateRegex = /^\d{2}\/\d{2}\/\d{4}$/;
   if (value && !dateRegex.test(value)) {
     updateCorrectionInfo(id, "error", "Date must be in DD/MM/YYYY format");
@@ -883,10 +899,14 @@ const validateBirthDate = (id: string, value: string, updateCorrectionInfo: Upda
 
   // Additional date validation
   if (value) {
-    const [day, month, year] = value.split('/').map(Number);
+    const [day, month, year] = value.split("/").map(Number);
     const date = new Date(year, month - 1, day);
-    
-    if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
+
+    if (
+      date.getDate() !== day ||
+      date.getMonth() !== month - 1 ||
+      date.getFullYear() !== year
+    ) {
       updateCorrectionInfo(id, "error", "Please enter a valid date");
     } else {
       updateCorrectionInfo(id, "error", "");
@@ -896,21 +916,38 @@ const validateBirthDate = (id: string, value: string, updateCorrectionInfo: Upda
   }
 };
 
-const validateNID = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+const validateNID = (
+  id: string,
+  value: string,
+  updateCorrectionInfo: UpdateCorrectionInfo
+): void => {
   const nidRegex = /^\d+$/;
   if (value && !nidRegex.test(value)) {
     updateCorrectionInfo(id, "error", "NID must contain only numbers");
-  } else if (value && value.length !== 10 && value.length !== 13 && value.length !== 17) {
+  } else if (
+    value &&
+    value.length !== 10 &&
+    value.length !== 13 &&
+    value.length !== 17
+  ) {
     updateCorrectionInfo(id, "error", "NID must be 10, 13, or 17 digits");
   } else {
     updateCorrectionInfo(id, "error", "");
   }
 };
 
-const validatePassport = (id: string, value: string, updateCorrectionInfo: UpdateCorrectionInfo): void => {
+const validatePassport = (
+  id: string,
+  value: string,
+  updateCorrectionInfo: UpdateCorrectionInfo
+): void => {
   const passportRegex = /^[A-Z0-9<]+$/;
   if (value && !passportRegex.test(value)) {
-    updateCorrectionInfo(id, "error", "Only capital English letters, numbers and < symbol are allowed");
+    updateCorrectionInfo(
+      id,
+      "error",
+      "Only capital English letters, numbers and < symbol are allowed"
+    );
   } else {
     updateCorrectionInfo(id, "error", "");
   }
@@ -1100,6 +1137,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   ]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   /* ── Address modal ─────────────────────────────────────────────────────── */
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -1165,7 +1203,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
           permAddress: { ...prev.birthPlace },
         }));
         toast.success("জন্মস্থানের ঠিকানা স্থায়ী ঠিকানায় কপি করা হয়েছে");
-        
+
         // If perm address to present address is already checked, also update present address
         if (formData.copyPermAddrToPrsntAddr) {
           setAddresses((prev) => ({
@@ -1189,7 +1227,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
           permAddress: createEmptyAddress(),
         }));
         toast.success("স্থায়ী ঠিকানা সরানো হয়েছে");
-        
+
         // Also uncheck and clear present address if it was dependent
         if (formData.copyPermAddrToPrsntAddr) {
           setFormData((prev) => ({ ...prev, copyPermAddrToPrsntAddr: false }));
@@ -1451,6 +1489,10 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   /* ── File upload helpers (mock) ──────────────────────────────────────── */
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    processSelectedFiles(files);
+  };
+
+  const processSelectedFiles = (files: File[]) => {
     const valid = files.filter(
       (f) =>
         ["image/jpeg", "image/jpg", "image/png", "application/pdf"].includes(
@@ -1462,10 +1504,32 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       toast.error("কিছু ফাইল অবৈধ (শুধুমাত্র JPG, PNG, PDF এবং সর্বোচ্চ 2MB)");
     }
 
-    setUploadingFiles((p) => [
-      ...p,
-      ...valid.map((f) => ({ file: f, fileTypeId: "-1" })),
-    ]);
+    if (valid.length > 0) {
+      setUploadingFiles((p) => [
+        ...p,
+        ...valid.map((f) => ({ file: f, fileTypeId: "-1" })),
+      ]);
+      toast.success(`${valid.length} টি ফাইল নির্বাচন করা হয়েছে`);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    processSelectedFiles(files);
   };
 
   const updateUploadingFileType = (idx: number, typeId: string) => {
@@ -2180,7 +2244,11 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                                 )
                               }
                               onBlur={(e) =>
-                                validateBanglaText(info.id, e.target.value, updateCorrectionInfo)
+                                validateBanglaText(
+                                  info.id,
+                                  e.target.value,
+                                  updateCorrectionInfo
+                                )
                               }
                               className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
                                 info.error
@@ -2215,7 +2283,11 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                                 )
                               }
                               onBlur={(e) =>
-                                validateEnglishText(info.id, e.target.value, updateCorrectionInfo)
+                                validateEnglishText(
+                                  info.id,
+                                  e.target.value,
+                                  updateCorrectionInfo
+                                )
                               }
                               className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
                                 info.error
@@ -2245,7 +2317,11 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                                 )
                               }
                               onBlur={(e) =>
-                                validateBirthDate(info.id, e.target.value, updateCorrectionInfo)
+                                validateBirthDate(
+                                  info.id,
+                                  e.target.value,
+                                  updateCorrectionInfo
+                                )
                               }
                               className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
                                 info.error
@@ -2275,7 +2351,11 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                                 )
                               }
                               onBlur={(e) =>
-                                validateNID(info.id, e.target.value, updateCorrectionInfo)
+                                validateNID(
+                                  info.id,
+                                  e.target.value,
+                                  updateCorrectionInfo
+                                )
                               }
                               className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
                                 info.error
@@ -2305,7 +2385,11 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                                 )
                               }
                               onBlur={(e) =>
-                                validatePassport(info.id, e.target.value, updateCorrectionInfo)
+                                validatePassport(
+                                  info.id,
+                                  e.target.value,
+                                  updateCorrectionInfo
+                                )
                               }
                               className={`px-3 py-2 border rounded w-full dark:bg-gray-600 dark:border-gray-500 dark:text-white ${
                                 info.error
@@ -2422,7 +2506,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                   />
                 </div>
 
-                {/* ---------- File Upload ---------- */}
+                {/* ---------- File Upload with Drag & Drop ---------- */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
                     ফাইল আপলোড
@@ -2431,91 +2515,188 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                     শুধুমাত্র ইমেজ ফাইল (.jpg, .jpeg, .png) আপলোড করা যাবে।
                     (প্রতিটি ফাইলের জন্য সর্বোচ্চ ফাইল সাইজ 2 মেগা বাইট)
                   </p>
-                  <div className="mt-2 border-dashed border-2 p-4 rounded dark:border-gray-600">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      multiple
-                      accept="image/*,.pdf"
-                      onChange={handleFileSelect}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800"
-                    >
-                      ফাইল নির্বাচন করুন
-                    </button>
+
+                  {/* Drag & Drop Area */}
+                  <div
+                    className={`mt-2 border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      isDragOver
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                        : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800"
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-4">
+                      <svg
+                        className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 48 48"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M8 14v20c0 4.418 7.163 8 16 8 1.381 0 2.721-.087 4-.252M8 14c0 4.418 7.163 8 16 8s16-3.582 16-8M8 14c0-4.418 7.163-8 16-8s16 3.582 16 8m0 0v14m0-4c0 4.418-7.163 8-16 8S8 28.418 8 24m32 10v6m0 0l-3-3m3 3l3-3"
+                        />
+                      </svg>
+                      <div>
+                        <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          ফাইল এখানে ড্রপ করুন
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                          অথবা ফাইল নির্বাচন করতে ক্লিক করুন
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        multiple
+                        accept="image/*,.pdf"
+                        onChange={handleFileSelect}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+                      >
+                        ফাইল নির্বাচন করুন
+                      </button>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        JPG, PNG, PDF ফাইল সমর্থিত • সর্বোচ্চ 2MB প্রতি ফাইল
+                      </p>
+                    </div>
                   </div>
 
                   {/* Uploading list */}
-                  {uploadingFiles.map((item, idx) => (
-                    <div
-                      key={`uploading-${idx}`}
-                      className="mt-2 flex items-center gap-2"
-                    >
-                      <span className="flex-1 truncate text-gray-700 dark:text-gray-300">
-                        {item.file.name}
-                      </span>
-                      <select
-                        value={item.fileTypeId}
-                        onChange={(e) =>
-                          updateUploadingFileType(idx, e.target.value)
-                        }
-                        className="px-2 py-1 border overflow-x-hidden max-w-1/3 rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      >
-                        <option value="-1">---টাইপ---</option>
-                        {fileTypes.map((t) => (
-                          <option key={`filetype-${t.id}`} value={t.id}>
-                            {t.name}
-                          </option>
+                  {uploadingFiles.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        নির্বাচিত ফাইল ({uploadingFiles.length})
+                      </h4>
+                      <div className="space-y-3">
+                        {uploadingFiles.map((item, idx) => (
+                          <div
+                            key={`uploading-${idx}`}
+                            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
+                                {item.file.name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {(item.file.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            <select
+                              value={item.fileTypeId}
+                              onChange={(e) =>
+                                updateUploadingFileType(idx, e.target.value)
+                              }
+                              className="px-3 py-2 border rounded text-sm dark:bg-gray-600 dark:border-gray-500 dark:text-white 
+             w-40 truncate"
+                            >
+                              <option value="-1">---টাইপ নির্বাচন---</option>
+                              {fileTypes.map((t) => (
+                                <option
+                                  key={`filetype-${t.id}`}
+                                  value={t.id}
+                                  className="truncate"
+                                >
+                                  {t.name}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => handleFileUpload(idx)}
+                              className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 transition-colors"
+                            >
+                              আপলোড
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeUploadingFile(idx)}
+                              className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                              title="Remove file"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </div>
                         ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => handleFileUpload(idx)}
-                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
-                      >
-                        Upload
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeUploadingFile(idx)}
-                        className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                      >
-                        ×
-                      </button>
+                      </div>
                     </div>
-                  ))}
+                  )}
 
                   {/* Uploaded list */}
-                  {uploadedFiles.map((f) => (
-                    <div
-                      key={`uploaded-${f.id}`}
-                      className="mt-2 flex items-center gap-2"
-                    >
-                      <a
-                        href={f.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 truncate text-blue-600 dark:text-blue-400"
-                      >
-                        {f.name} ( {f.fileType} )
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setUploadedFiles((p) =>
-                            p.filter((x) => x.id !== f.id)
-                          )
-                        }
-                        className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
-                      >
-                        ×
-                      </button>
+                  {uploadedFiles.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
+                        আপলোডকৃত ফাইল ({uploadedFiles.length})
+                      </h4>
+                      <div className="space-y-2">
+                        {uploadedFiles.map((f) => (
+                          <div
+                            key={`uploaded-${f.id}`}
+                            className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <a
+                                href={f.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-green-700 dark:text-green-400 hover:underline font-medium text-sm truncate block"
+                              >
+                                {f.name}
+                              </a>
+                              <p className="text-xs text-green-600 dark:text-green-500">
+                                {f.fileType}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setUploadedFiles((p) =>
+                                  p.filter((x) => x.id !== f.id)
+                                )
+                              }
+                              className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                              title="Delete file"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {/* ---------- Applicant Information ---------- */}

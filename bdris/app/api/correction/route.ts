@@ -232,11 +232,11 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "birthPlaceLocationId",
-          val: birthPlace.paurasavaOrUnion,
+          val: birthPlace.paurasavaOrUnion.toString(),
         },
         {
           id: "birthPlaceWardInPaurasavaOrUnion",
-          val: birthPlace.ward,
+          val: birthPlace.ward.toString(),
         },
         {
           id: "birthPlaceEn",
@@ -253,11 +253,11 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "permAddrLocationId",
-          val: permAddress.paurasavaOrUnion,
+          val: permAddress.paurasavaOrUnion.toString(),
         },
         {
           id: "permAddrWardInPaurasavaOrUnion",
-          val: permAddress.ward,
+          val: permAddress.ward.toString(),
         },
         {
           id: "permAddrEn",
@@ -273,11 +273,11 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "prsntAddrLocationId",
-          val: prsntAddress.paurasavaOrUnion,
+          val: prsntAddress.paurasavaOrUnion.toString(),
         },
         {
           id: "prsntAddrWardInPaurasavaOrUnion",
-          val: prsntAddress.ward,
+          val: prsntAddress.ward.toString(),
         },
         {
           id: "prsntAddrEn",
@@ -354,115 +354,115 @@ export async function POST(request: NextRequest) {
       );
       formData.append(
         "birthPlaceEn",
-        `${birthPlace.vilAreaTownEn || ""} ${
-          birthPlace.postOfcEn || ""
-        }`.trim() || ""
+        `${birthPlace.houseRoadEn} ${birthPlace.vilAreaTownEn} ${birthPlace.postOfcEn}`.trim() ||
+          ""
       );
       formData.append(
         "birthPlaceBn",
-        `${birthPlace.vilAreaTownBn || ""} ${
-          birthPlace.postOfc || ""
-        }`.trim() || ""
+        `${birthPlace.houseRoadBn} ${birthPlace.vilAreaTownBn} ${birthPlace.postOfc}`.trim() ||
+          ""
       );
     }
 
     // Handle Permanent Address - ALWAYS include it with proper data
-    if (birthPlace && birthPlace.country !== "-1") {
+    if (permAddress && permAddress.country !== "-1") {
       // Use birth place data for permanent address
       formData.append("permAddrCorrectionCheckbox", "yes");
-      formData.append("permAddrCountry", birthPlace.country);
-      formData.append("permAddrDiv", birthPlace.division.toString());
-      formData.append("permAddrDist", birthPlace.district.toString());
+      formData.append("permAddrCountry", permAddress.country);
+      formData.append("permAddrDiv", permAddress.division.toString());
+      formData.append("permAddrDist", permAddress.district.toString());
       formData.append(
         "permAddrCityCorpCantOrUpazila",
-        birthPlace.cityCorpCantOrUpazila.toString()
+        permAddress.cityCorpCantOrUpazila.toString()
       );
       formData.append(
         "permAddrPaurasavaOrUnion",
-        birthPlace.paurasavaOrUnion.toString()
+        permAddress.paurasavaOrUnion.toString()
       );
       formData.append("permAddrWardInCityCorp", "-1");
       formData.append("permAddrArea", "-1");
       formData.append(
         "permAddrWardInPaurasavaOrUnion",
-        birthPlace.ward.toString()
+        permAddress.ward.toString()
       );
 
       // Add ALL permanent address fields
-      formData.append("permAddrPostOfc", birthPlace.postOfc || "");
-      formData.append("permAddrPostOfcEn", birthPlace.postOfcEn || "");
-      formData.append("permAddrVilAreaTownBn", birthPlace.vilAreaTownBn || "");
-      formData.append("permAddrVilAreaTownEn", birthPlace.vilAreaTownEn || "");
-      formData.append("permAddrHouseRoadBn", birthPlace.houseRoadBn || "");
-      formData.append("permAddrHouseRoadEn", birthPlace.houseRoadEn || "");
+      formData.append("permAddrPostOfc", permAddress.postOfc || "");
+      formData.append("permAddrPostOfcEn", permAddress.postOfcEn || "");
+      formData.append("permAddrVilAreaTownBn", permAddress.vilAreaTownBn || "");
+      formData.append("permAddrVilAreaTownEn", permAddress.vilAreaTownEn || "");
+      formData.append("permAddrHouseRoadBn", permAddress.houseRoadBn || "");
+      formData.append("permAddrHouseRoadEn", permAddress.houseRoadEn || "");
       formData.append("permAddrPostCode", "");
       formData.append(
         "permAddrLocationId",
-        birthPlace.geoId !== "0"
-          ? birthPlace.geoId
-          : birthPlace.paurasavaOrUnion.toString()
+        permAddress.geoId !== "0"
+          ? permAddress.geoId
+          : permAddress.paurasavaOrUnion.toString()
       );
       formData.append(
         "permAddrEn",
-        `${birthPlace.vilAreaTownEn || ""} ${
-          birthPlace.postOfcEn || ""
-        }`.trim() || ""
+        `${permAddress.houseRoadEn} ${permAddress.vilAreaTownEn} ${permAddress.postOfcEn}`.trim() ||
+          ""
       );
       formData.append(
         "permAddrBn",
-        `${birthPlace.vilAreaTownBn || ""} ${
-          birthPlace.postOfc || ""
-        }`.trim() || ""
+        `${permAddress.houseRoadBn} ${permAddress.vilAreaTownBn} ${permAddress.postOfc}`.trim() ||
+          ""
       );
     }
 
     // Handle Present Address - ALWAYS include it with proper data
-    if (birthPlace && birthPlace.country !== "-1") {
+    if (prsntAddress && prsntAddress.country !== "-1") {
       // Use birth place data for present address
       formData.append("prsntAddrCorrectionCheckbox", "yes");
-      formData.append("prsntAddrCountry", birthPlace.country);
-      formData.append("prsntAddrDiv", birthPlace.division.toString());
-      formData.append("prsntAddrDist", birthPlace.district.toString());
+      formData.append("prsntAddrCountry", prsntAddress.country);
+      formData.append("prsntAddrDiv", prsntAddress.division.toString());
+      formData.append("prsntAddrDist", prsntAddress.district.toString());
       formData.append(
         "prsntAddrCityCorpCantOrUpazila",
-        birthPlace.cityCorpCantOrUpazila.toString()
+        prsntAddress.cityCorpCantOrUpazila.toString()
       );
       formData.append(
         "prsntAddrPaurasavaOrUnion",
-        birthPlace.paurasavaOrUnion.toString()
+        prsntAddress.paurasavaOrUnion.toString()
       );
       formData.append("prsntAddrWardInCityCorp", "-1");
       formData.append("prsntAddrArea", "-1");
       formData.append(
         "prsntAddrWardInPaurasavaOrUnion",
-        birthPlace.ward.toString()
+        prsntAddress.ward.toString()
       );
 
       // Add ALL present address fields
-      formData.append("prsntAddrPostOfc", birthPlace.postOfc || "");
-      formData.append("prsntAddrPostOfcEn", birthPlace.postOfcEn || "");
-      formData.append("prsntAddrVilAreaTownBn", birthPlace.vilAreaTownBn || "");
-      formData.append("prsntAddrVilAreaTownEn", birthPlace.vilAreaTownEn || "");
-      formData.append("prsntAddrHouseRoadBn", birthPlace.houseRoadBn || "");
-      formData.append("prsntAddrHouseRoadEn", birthPlace.houseRoadEn || "");
+      formData.append("prsntAddrPostOfc", prsntAddress.postOfc || "");
+      formData.append("prsntAddrPostOfcEn", prsntAddress.postOfcEn || "");
+      formData.append(
+        "prsntAddrVilAreaTownBn",
+        prsntAddress.vilAreaTownBn || ""
+      );
+      formData.append(
+        "prsntAddrVilAreaTownEn",
+        prsntAddress.vilAreaTownEn || ""
+      );
+      formData.append("prsntAddrHouseRoadBn", prsntAddress.houseRoadBn || "");
+      formData.append("prsntAddrHouseRoadEn", prsntAddress.houseRoadEn || "");
       formData.append("prsntAddrPostCode", "");
       formData.append(
         "prsntAddrLocationId",
-        birthPlace.geoId !== "0"
-          ? birthPlace.geoId
-          : birthPlace.paurasavaOrUnion.toString()
+        prsntAddress.geoId !== "0"
+          ? prsntAddress.geoId
+          : prsntAddress.paurasavaOrUnion.toString()
       );
       formData.append(
         "prsntAddrEn",
-        `${birthPlace.vilAreaTownEn || ""} ${
-          birthPlace.postOfcEn || ""
-        }`.trim() || ""
+        `${prsntAddress.houseRoadEn} ${prsntAddress.vilAreaTownEn} ${prsntAddress.postOfcEn}`.trim() ||
+          ""
       );
       formData.append(
         "prsntAddrBn",
-        `${birthPlace.vilAreaTownBn || ""} ${
-          birthPlace.postOfc || ""
-        }`.trim() || ""
+        `${prsntAddress.houseRoadBn} ${prsntAddress.vilAreaTownBn} ${prsntAddress.postOfc}`.trim() ||
+          ""
       );
     }
     formData.append(
