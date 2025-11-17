@@ -191,7 +191,10 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "birthPlaceLocationId",
-          val: birthPlace.paurasavaOrUnion.toString(),
+          val:
+            birthPlace.geoId !== "0"
+              ? birthPlace.geoId
+              : birthPlace.paurasavaOrUnion.toString(),
         },
         {
           id: "birthPlaceWardInPaurasavaOrUnion",
@@ -212,7 +215,10 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "permAddrLocationId",
-          val: permAddress.paurasavaOrUnion.toString(),
+          val:
+            permAddress.geoId !== "0"
+              ? permAddress.geoId
+              : permAddress.paurasavaOrUnion.toString(),
         },
         {
           id: "permAddrWardInPaurasavaOrUnion",
@@ -232,7 +238,10 @@ export async function POST(request: NextRequest) {
       correctionInfoArray.push(
         {
           id: "prsntAddrLocationId",
-          val: prsntAddress.paurasavaOrUnion.toString(),
+          val:
+            prsntAddress.geoId !== "0"
+              ? prsntAddress.geoId
+              : prsntAddress.paurasavaOrUnion.toString(),
         },
         {
           id: "prsntAddrWardInPaurasavaOrUnion",
