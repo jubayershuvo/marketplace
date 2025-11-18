@@ -4,6 +4,7 @@ import Currection from "@/models/Currection";
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { getUser } from "@/lib/getUser";
 
 // Define types for the request body
 interface CorrectionInfo {
@@ -179,7 +180,8 @@ export async function POST(request: NextRequest) {
     const body: CorrectionRequestBody = await request.json();
 
     await connectDB();
-    const currection = await Currection.create(body);
+    const user = await getUser();
+    const currection = await Currection.create({ ...body, user: user._id });
     // Validate required fields
     if (
       !body.ubrn ||

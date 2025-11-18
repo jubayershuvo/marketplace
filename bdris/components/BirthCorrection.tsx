@@ -144,6 +144,15 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
     houseRoadEn: initial?.houseRoadEn || "",
   });
 
+  const [addressErrors, setAddressErrors] = useState({
+    postOfc: "",
+    postOfcEn: "",
+    vilAreaTownBn: "",
+    vilAreaTownEn: "",
+    houseRoadBn: "",
+    houseRoadEn: "",
+  });
+
   const [loading, setLoading] = useState<LoadingState>({
     division: false,
     district: false,
@@ -171,6 +180,27 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
     upazila: useRef<HTMLSelectElement>(null),
     union: useRef<HTMLSelectElement>(null),
     ward: useRef<HTMLSelectElement>(null),
+  };
+
+  // Validation functions for address inputs
+  const validateBanglaText = (value: string): boolean => {
+    const banglaRegex = /^[\u0980-\u09FF\s.,;:!?()\-]+$/;
+    return banglaRegex.test(value) || value === "";
+  };
+
+  const validateEnglishText = (value: string): boolean => {
+    const englishRegex = /^[A-Za-z\s.,;:!?()\-]+$/;
+    return englishRegex.test(value) || value === "";
+  };
+
+  const validateBanglaWithNumbers = (value: string): boolean => {
+    const banglaWithNumbersRegex = /^[\u0980-\u09FF\s.,;:!?()\-০-৯]+$/;
+    return banglaWithNumbersRegex.test(value) || value === "";
+  };
+
+  const validateEnglishWithNumbers = (value: string): boolean => {
+    const englishWithNumbersRegex = /^[A-Za-z\s.,;:!?()\-0-9]+$/;
+    return englishWithNumbersRegex.test(value) || value === "";
   };
 
   const showLoading = (field: keyof LoadingState, visible: boolean) => {
@@ -241,7 +271,7 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
     };
   };
 
-  // Handle address input changes
+  // Handle address input changes with validation
   const handleAddressInputChange = (
     field: keyof typeof addressInputs,
     value: string
@@ -250,6 +280,141 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
       ...prev,
       [field]: value,
     }));
+
+    // Validate input based on field type
+    let isValid = true;
+    let errorMessage = "";
+
+    switch (field) {
+      case "postOfc":
+        isValid = validateBanglaText(value);
+        errorMessage = isValid ? "" : "শুধুমাত্র বাংলা অক্ষর অনুমোদিত";
+        break;
+      case "postOfcEn":
+        isValid = validateEnglishText(value);
+        errorMessage = isValid ? "" : "শুধুমাত্র ইংরেজি অক্ষর অনুমোদিত";
+        break;
+      case "vilAreaTownBn":
+        isValid = validateBanglaWithNumbers(value);
+        errorMessage = isValid ? "" : "শুধুমাত্র বাংলা অক্ষর ও সংখ্যা অনুমোদিত";
+        break;
+      case "vilAreaTownEn":
+        isValid = validateEnglishWithNumbers(value);
+        errorMessage = isValid
+          ? ""
+          : "শুধুমাত্র ইংরেজি অক্ষর ও সংখ্যা অনুমোদিত";
+        break;
+      case "houseRoadBn":
+        isValid = validateBanglaWithNumbers(value);
+        errorMessage = isValid ? "" : "শুধুমাত্র বাংলা অক্ষর ও সংখ্যা অনুমোদিত";
+        break;
+      case "houseRoadEn":
+        isValid = validateEnglishWithNumbers(value);
+        errorMessage = isValid
+          ? ""
+          : "শুধুমাত্র ইংরেজি অক্ষর ও সংখ্যা অনুমোদিত";
+        break;
+    }
+
+    setAddressErrors((prev) => ({
+      ...prev,
+      [field]: errorMessage,
+    }));
+  };
+
+  // Validate all address inputs before applying
+  const validateAddressInputs = (): boolean => {
+    const newErrors = { ...addressErrors };
+
+    // Validate postOfc (Bangla)
+    if (addressInputs.postOfc && !validateBanglaText(addressInputs.postOfc)) {
+      newErrors.postOfc = "শুধুমাত্র বাংলা অক্ষর অনুমোদিত";
+    } else {
+      newErrors.postOfc = "";
+    }
+
+    // Validate postOfcEn (English)
+    if (
+      addressInputs.postOfcEn &&
+      !validateEnglishText(addressInputs.postOfcEn)
+    ) {
+      newErrors.postOfcEn = "শুধুমাত্র ইংরেজি অক্ষর অনুমোদিত";
+    } else {
+      newErrors.postOfcEn = "";
+    }
+
+    // Validate vilAreaTownBn (Bangla with numbers) - required for non-Bangladesh
+    if (
+      selected.country !== "1" &&
+      !addressInputs.vilAreaTownBn.trim() &&
+      !addressInputs.vilAreaTownEn.trim()
+    ) {
+      newErrors.vilAreaTownBn =
+        "গ্রাম/পাড়া/মহল্লার নাম বাংলা বা ইংরেজিতে পূরণ করুন";
+    } else if (
+      addressInputs.vilAreaTownBn &&
+      !validateBanglaWithNumbers(addressInputs.vilAreaTownBn)
+    ) {
+      newErrors.vilAreaTownBn = "শুধুমাত্র বাংলা অক্ষর ও সংখ্যা অনুমোদিত";
+    } else {
+      newErrors.vilAreaTownBn = "";
+    }
+
+    // Validate vilAreaTownEn (English with numbers) - required for non-Bangladesh
+    if (
+      selected.country !== "1" &&
+      !addressInputs.vilAreaTownBn.trim() &&
+      !addressInputs.vilAreaTownEn.trim()
+    ) {
+      newErrors.vilAreaTownEn =
+        "গ্রাম/পাড়া/মহল্লার নাম বাংলা বা ইংরেজিতে পূরণ করুন";
+    } else if (
+      addressInputs.vilAreaTownEn &&
+      !validateEnglishWithNumbers(addressInputs.vilAreaTownEn)
+    ) {
+      newErrors.vilAreaTownEn = "শুধুমাত্র ইংরেজি অক্ষর ও সংখ্যা অনুমোদিত";
+    } else {
+      newErrors.vilAreaTownEn = "";
+    }
+
+    // Validate houseRoadBn (Bangla with numbers)
+    if (
+      addressInputs.houseRoadBn &&
+      !validateBanglaWithNumbers(addressInputs.houseRoadBn)
+    ) {
+      newErrors.houseRoadBn = "শুধুমাত্র বাংলা অক্ষর ও সংখ্যা অনুমোদিত";
+    } else {
+      newErrors.houseRoadBn = "";
+    }
+
+    // Validate houseRoadEn (English with numbers)
+    if (
+      addressInputs.houseRoadEn &&
+      !validateEnglishWithNumbers(addressInputs.houseRoadEn)
+    ) {
+      newErrors.houseRoadEn = "শুধুমাত্র ইংরেজি অক্ষর ও সংখ্যা অনুমোদিত";
+    } else {
+      newErrors.houseRoadEn = "";
+    }
+
+    setAddressErrors(newErrors);
+
+    // Check if there are any errors
+    const hasErrors = Object.values(newErrors).some((error) => error !== "");
+
+    // For non-Bangladesh countries, check if at least one address field is filled
+    if (selected.country !== "1" && selected.country !== "-1") {
+      const hasAddressContent =
+        addressInputs.vilAreaTownBn.trim() ||
+        addressInputs.vilAreaTownEn.trim();
+
+      if (!hasAddressContent) {
+        toast.error("গ্রাম/পাড়া/মহল্লার নাম বাংলা বা ইংরেজিতে পূরণ করুন");
+        return false;
+      }
+    }
+
+    return !hasErrors;
   };
 
   // ── Handlers ───────────────────────────────────────────────────────────
@@ -445,6 +610,11 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
   };
 
   const apply = () => {
+    // Validate address inputs first
+    if (!validateAddressInputs()) {
+      return;
+    }
+
     const addr = buildAddress();
 
     if (addr) {
@@ -604,7 +774,7 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
     </div>
   );
 
-  // Render address input fields
+  // Render address input fields with validation
   const renderAddressInputs = () => (
     <div className="space-y-4 mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded">
       <h4 className="font-semibold text-gray-800 dark:text-gray-200">
@@ -623,9 +793,16 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
             onChange={(e) =>
               handleAddressInputChange("postOfc", e.target.value)
             }
-            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              addressErrors.postOfc ? "border-red-500 dark:border-red-400" : ""
+            }`}
             placeholder="ডাকঘরের নাম বাংলায়"
           />
+          {addressErrors.postOfc && (
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+              {addressErrors.postOfc}
+            </p>
+          )}
         </div>
 
         {/* ডাকঘর (ইংরেজিতে) */}
@@ -639,9 +816,18 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
             onChange={(e) =>
               handleAddressInputChange("postOfcEn", e.target.value)
             }
-            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              addressErrors.postOfcEn
+                ? "border-red-500 dark:border-red-400"
+                : ""
+            }`}
             placeholder="Post Office Name in English"
           />
+          {addressErrors.postOfcEn && (
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+              {addressErrors.postOfcEn}
+            </p>
+          )}
         </div>
 
         {/* গ্রাম / পাড়া / মহল্লা */}
@@ -654,11 +840,20 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
             onChange={(e) =>
               handleAddressInputChange("vilAreaTownBn", e.target.value)
             }
-            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              addressErrors.vilAreaTownBn
+                ? "border-red-500 dark:border-red-400"
+                : ""
+            }`}
             placeholder="গ্রাম/পাড়া/মহল্লার নাম বাংলায়"
             rows={3}
             required={selected.country !== "1"}
           />
+          {addressErrors.vilAreaTownBn && (
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+              {addressErrors.vilAreaTownBn}
+            </p>
+          )}
         </div>
 
         {/* গ্রাম / পাড়া / মহল্লা (ইংরেজি) */}
@@ -671,11 +866,20 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
             onChange={(e) =>
               handleAddressInputChange("vilAreaTownEn", e.target.value)
             }
-            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              addressErrors.vilAreaTownEn
+                ? "border-red-500 dark:border-red-400"
+                : ""
+            }`}
             placeholder="Village/Area/Town in English"
             rows={3}
             required={selected.country !== "1"}
           />
+          {addressErrors.vilAreaTownEn && (
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+              {addressErrors.vilAreaTownEn}
+            </p>
+          )}
         </div>
 
         {/* বাসা ও সড়ক (নাম, নম্বর) */}
@@ -688,10 +892,19 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
             onChange={(e) =>
               handleAddressInputChange("houseRoadBn", e.target.value)
             }
-            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              addressErrors.houseRoadBn
+                ? "border-red-500 dark:border-red-400"
+                : ""
+            }`}
             placeholder="বাসা ও সড়কের বিবরণ বাংলায়"
             rows={3}
           />
+          {addressErrors.houseRoadBn && (
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+              {addressErrors.houseRoadBn}
+            </p>
+          )}
         </div>
 
         {/* বাসা ও সড়ক (নাম, নম্বর) (ইংরেজি) */}
@@ -704,10 +917,19 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({ onApply, initial }) => {
             onChange={(e) =>
               handleAddressInputChange("houseRoadEn", e.target.value)
             }
-            className="w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className={`w-full rounded border p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+              addressErrors.houseRoadEn
+                ? "border-red-500 dark:border-red-400"
+                : ""
+            }`}
             placeholder="House and Road details in English"
             rows={3}
           />
+          {addressErrors.houseRoadEn && (
+            <p className="text-red-500 dark:text-red-400 text-sm mt-1">
+              {addressErrors.houseRoadEn}
+            </p>
+          )}
         </div>
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
@@ -1139,6 +1361,36 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  /* ── OTP Countdown Timer ───────────────────────────────────────────────── */
+  const [otpCountdown, setOtpCountdown] = useState<number>(0);
+  const [isOtpSent, setIsOtpSent] = useState<boolean>(false);
+
+  // Countdown timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (otpCountdown > 0) {
+      interval = setInterval(() => {
+        setOtpCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (otpCountdown === 0 && isOtpSent) {
+      setIsOtpSent(false);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [otpCountdown, isOtpSent]);
+
+  // Format time for display (MM:SS)
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
   /* ── Address modal ─────────────────────────────────────────────────────── */
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [currentAddressType, setCurrentAddressType] = useState<
@@ -1431,7 +1683,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     const loadingToast = toast.loading("অনুসন্ধান করা হচ্ছে...");
 
     try {
-      const res = await fetch("/api/get-data-by-ubrn", {
+      const res = await fetch("/api/birth/application/correction/get-data-by-ubrn", {
         method: "POST",
         body: JSON.stringify({
           ubrn: formData.ubrn,
@@ -1552,7 +1804,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     const loadingToast = toast.loading(`ফাইল আপলোড হচ্ছে: ${file.name}`);
 
     try {
-      const res = await fetch("/api/upload_doc", {
+      const res = await fetch("/api/birth/application/correction/upload_doc", {
         method: "POST",
         body: formData,
       });
@@ -1689,7 +1941,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
     };
 
     try {
-      const response = await fetch("/api/otp-verify", {
+      const response = await fetch("/api/birth/application/correction/otp-verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1710,7 +1962,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
       }
 
       try {
-        const resp = await fetch("/api/correction", {
+        const resp = await fetch("/api/birth/application/correction", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1724,7 +1976,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         }
 
         toast.success("আবেদন সফলভাবে জমা হয়েছে", { id: "submission" });
-        router.push(`/birth-correction/view/${data._id}`);
+        router.push(`/birth/application/correction/view/${data._id}`);
       } catch (error) {
         toast.error("আবেদন জমা করতে সমস্যা হয়েছে", { id: "submission" });
       }
@@ -1754,6 +2006,15 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         );
         return;
       }
+
+      // Check if OTP was already sent and countdown is active
+      if (isOtpSent && otpCountdown > 0) {
+        toast.error(
+          `আপনি ${formatTime(otpCountdown)} পরে আবার OTP পাঠাতে পারবেন`
+        );
+        return;
+      }
+
       const submissionData = {
         ubrn: formData.ubrn,
         dob: birthRecord.personDob,
@@ -1773,22 +2034,26 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
         isPermAddressIsSameAsBirthPlace: formData.copyBirthPlaceToPermAddr,
         isPrsntAddressIsSameAsPermAddress: formData.copyPermAddrToPrsntAddr,
       };
+
       console.log(JSON.stringify(submissionData));
+
       toast.loading("OTP পাঠানো হচ্ছে...", { id: "otp" });
-      const resp = await fetch("/api/is-valid", {
+
+      const resp = await fetch("/api/birth/application/correction/is-valid", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(submissionData),
       });
+
       const res = await resp.json();
       if (res.success !== true) {
         toast.error(res.error.message || res.message, { id: "otp" });
         return;
       }
 
-      const response = await fetch("/api/otp", {
+      const response = await fetch("/api/birth/application/correction/otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1806,6 +2071,10 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
 
       const resData = await response.json();
       if (response.ok) {
+        // Start 10-minute countdown (600 seconds)
+        setOtpCountdown(600); // 10 minutes in seconds
+        setIsOtpSent(true);
+
         toast.success("OTP সফলভাবে পাঠানো হয়েছে", { id: "otp" });
       } else {
         toast.error(resData.error.message || "OTP পাঠাতে সমস্যা হয়েছে", {
@@ -1821,7 +2090,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
   const sessionReload = async () => {
     try {
       toast.loading("সেশন রিলোড হচ্ছে...", { id: "sessionReload" });
-      const response = await fetch("/api/correction/init");
+      const response = await fetch("/api/birth/application/correction/init");
 
       if (response.ok) {
         const newData = await response.json();
@@ -2732,6 +3001,7 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                         placeholder="example@email.com"
                       />
                     </div>
+
                     {/* Phone input with Send button on the right */}
                     <div className="mb-4 w-full">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2741,9 +3011,11 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                         <input
                           type="tel"
                           value={formData.phone}
-                          onChange={(e) =>
-                            handleInputChange("phone", e.target.value)
-                          }
+                          onChange={(e) => {
+                            setOtpCountdown(0);
+                            setIsOtpSent(false);
+                            handleInputChange("phone", e.target.value);
+                          }}
                           className="flex-1 px-3 py-2 border rounded-md sm:rounded-l-md sm:rounded-r-none w-full mb-2 sm:mb-0 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                           placeholder="01XXXXXXXXX"
                           required
@@ -2751,11 +3023,29 @@ export default function BirthCorrectionForm({ InitData }: { InitData: IData }) {
                         <button
                           type="button"
                           onClick={sendOTP}
-                          className="bg-green-500 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-md sm:rounded-l-none sm:rounded-r-md w-full sm:w-auto dark:bg-green-600 dark:hover:bg-green-700"
+                          disabled={isOtpSent && otpCountdown > 0}
+                          className={`font-bold px-4 py-2 rounded-md sm:rounded-l-none sm:rounded-r-md w-full sm:w-auto transition-colors ${
+                            isOtpSent && otpCountdown > 0
+                              ? "bg-gray-400 text-gray-700 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400"
+                              : "bg-green-500 hover:bg-green-700 text-white dark:bg-green-600 dark:hover:bg-green-700"
+                          }`}
                         >
-                          Send
+                          {isOtpSent && otpCountdown > 0 ? (
+                            <span className="flex items-center justify-center">
+                              <span className="mr-1">⌛</span>
+                              {formatTime(otpCountdown)}
+                            </span>
+                          ) : (
+                            "Send"
+                          )}
                         </button>
                       </div>
+                      {isOtpSent && otpCountdown > 0 && (
+                        <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                          OTP পাঠানো হয়েছে। {formatTime(otpCountdown)} পরে আবার
+                          পাঠাতে পারবেন
+                        </p>
+                      )}
                     </div>
 
                     {/* OTP input with Verify button on the right */}

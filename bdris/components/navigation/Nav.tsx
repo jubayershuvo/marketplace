@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   X,
@@ -9,22 +9,30 @@ import {
   ArrowLeftToLine,
   ArrowRightToLine,
   Pen,
+  FormInputIcon,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "../ThemeMod";
 import LogoutButton from "../Logout";
-import { Toaster } from "react-hot-toast";
-import useDevToolsDetection from "@/lib/useDevToolsDetection";
+import toast, { Toaster } from "react-hot-toast";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { updateUser, userLogout } from "@/lib/userSlice";
+import axios from "axios";
 
 const menuItems = [
   { label: "Home", icon: <Home size={20} />, href: "/" },
   {
+    label: "Birth Application",
+    icon: <FormInputIcon size={20} />,
+    href: "/birth/application/registration",
+  },
+  {
     label: "Birth Correction",
     icon: <Pen size={20} />,
-    href: "/birth-correction",
+    href: "/birth/application/correction",
   },
-  { label: "Profile", icon: <User size={20} />, href: "/profile" },
   { label: "Settings", icon: <Settings size={20} />, href: "/settings" },
 ];
 
@@ -32,7 +40,22 @@ export default function Nav({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
-  // const isBlocked = useDevToolsDetection();
+  const { user, isLoggedIn } = useAppSelector((state) => state.userAuth);
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    async function fetchData() {
+      try {
+        await axios.get(`/api/logout`, { withCredentials: true });
+        dispatch(userLogout());
+        router.push("/login");
+      } catch (error) {
+        toast.error("Error logging out. Please try again.");
+      }
+    }
+    fetchData();
+  };
 
   useEffect(() => {
     let prevWidth = window.innerWidth;
@@ -61,6 +84,41 @@ export default function Nav({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Fetch user profile and counts
+  useEffect(() => {
+    async function fetchData() {
+      if (isLoggedIn && user._id) {
+        try {
+          const response = await axios.get(`/api/profile`, {
+            withCredentials: true,
+          });
+          dispatch(updateUser(response.data));
+        } catch (error: unknown) {
+          if (
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error
+          ) {
+            const err = error as { response?: { status?: number } };
+            if (err.response?.status === 401) {
+              handleLogout();
+            }
+          } else if (error instanceof Error) {
+            console.error("Error fetching profile:", error.message);
+          } else if (typeof error === "object" && error !== null) {
+            console.error("Error fetching profile:", JSON.stringify(error));
+          } else {
+            console.error("Error fetching profile:", String(error));
+          }
+        }
+      } else {
+        router.push("/login");
+      }
+    }
+
+    fetchData();
+  }, [isLoggedIn]);
 
   if (pathname === "/login" || pathname === "/404") {
     return <>{children}</>;
@@ -102,14 +160,26 @@ export default function Nav({ children }: { children: React.ReactNode }) {
 
           <h1 className="text-lg font-semibold text-white">My App</h1>
         </div>
-        <ThemeToggle />
+
+        <div className="flex items-center gap-4">
+          {/* Balance Display */}
+          <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
+            <Wallet size={16} className="text-white" />
+            <span className="text-white font-medium text-sm">
+              BDT {user?.balance || "0.00"}
+            </span>
+          </div>
+
+          <LogoutButton />
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* BODY */}
       <div className="flex flex-1 overflow-hidden">
         {/* SIDEBAR (desktop) */}
         <aside
-          className={`hidden md:flex flex-col transition-all duration-300 ease-in-out 
+          className={`hidden mt-1 md:flex flex-col transition-all duration-300 ease-in-out 
             bg-gradient-to-b from-slate-100 to-slate-50 
             dark:from-slate-900 dark:to-slate-800
             text-gray-900 dark:text-gray-100 shadow-lg
@@ -145,13 +215,20 @@ export default function Nav({ children }: { children: React.ReactNode }) {
                 collapsed ? "justify-center" : "justify-start"
               }  p-4 mx-2 my-1 rounded-lg group relative transition-all duration-300 ease-in-out`}
             >
-              <User size={20} />
+              <img
+                src={
+                  user?.avatar ||
+                  `https://api.dicebear.com/7.x/initials/svg?seed=${user?.username}`
+                }
+                alt=""
+                className="w-8 h-8 rounded-full mr-2"
+              />
               <span
                 className={`ml-3 font-medium transition-all duration-300 ${
                   collapsed ? "opacity-0 absolute left-14" : "opacity-100"
                 }`}
               >
-                Profile
+                {user?.name}
               </span>
             </Link>
           </div>
@@ -167,7 +244,7 @@ export default function Nav({ children }: { children: React.ReactNode }) {
                 mobileOpen ? "translate-x-0" : "-translate-x-64"
               } flex flex-col`}
         >
-          <div className="flex-1">
+          <div className="flex-1 m-2">
             {menuItems.map((item) => (
               <Link
                 key={item?.href}
@@ -193,9 +270,17 @@ export default function Nav({ children }: { children: React.ReactNode }) {
               href="/profile"
               className="flex items-center p-4 rounded-lg 
                hover:bg-indigo-200/70 dark:hover:bg-teal-700/50 transition-all"
+              onClick={() => setMobileOpen(false)}
             >
-              <User size={20} />
-              <span className="ml-3 font-medium">Profile</span>
+              <img
+                src={
+                  user?.avatar ||
+                  `https://api.dicebear.com/7.x/initials/svg?seed=${user?.username}`
+                }
+                alt=""
+                className="w-8 h-8 rounded-full mr-2"
+              />
+              <span className="ml-3 font-medium">{user?.name}</span>
             </Link>
           </div>
         </div>

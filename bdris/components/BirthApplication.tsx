@@ -1,39 +1,10 @@
 "use client";
 
+import { countriesList, dutaBasCountries, nationalityOptions } from "@/json/countries";
 import { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 
 // Mock data for countries and nationalities
-const countriesList = [
-  {
-    id: "1",
-    nameBn: "বাংলাদেশ",
-    nameEn: "BANGLADESH",
-    geoId: "0",
-    targetGeoOrder: 0,
-  },
-  {
-    id: "7380",
-    nameBn: "আলজেরিয়া",
-    nameEn: "ALGERIA",
-    geoId: "10",
-    targetGeoOrder: 0,
-  },
-  {
-    id: "5726",
-    nameBn: "অস্ট্রেলিয়া",
-    nameEn: "AUSTRALIA",
-    geoId: "10",
-    targetGeoOrder: 0,
-  },
-];
-
-const nationalityOptions = [
-  { value: "", labelBn: "---নির্বাচন করুন---", labelEn: "---Select---" },
-  { value: "-1", labelBn: "অজানা", labelEn: "Unknown" },
-  { value: "1", labelBn: "বাংলাদেশী", labelEn: "Bangladeshi" },
-  { value: "2", labelBn: "মালয়েশিয়া", labelEn: "Malaysian" },
-];
 
 // Types
 interface GeoLocation {
@@ -43,6 +14,8 @@ interface GeoLocation {
   geoLevelId?: number;
   targetGeoOrder?: number;
   geoId?: string;
+  officeNameBn?: string;
+  officeNameEn?: string;
 }
 
 interface Address {
@@ -94,6 +67,208 @@ interface OptionsState {
 interface GeoResponse {
   geoObject: GeoLocation[];
 }
+
+interface OfficeGeoResponse {
+  geoGroup: string;
+  geoOrder: number;
+  geoType: number;
+  targetGeoOrder: number;
+  geoObject: GeoLocation | GeoLocation[];
+}
+
+const countriesListb = [{
+    id: "1",
+    nameBn: "বাংলাদেশ",
+    nameEn: "BANGLADESH",
+    geoId: "0",
+    geoParentId: "5556",
+  },]
+
+// Utility functions for date validation
+const isValidDate = (day: number, month: number, year: number): boolean => {
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  
+  // Check for months with 30 days
+  if ([4, 6, 9, 11].includes(month) && day > 30) return false;
+  
+  // Check for February
+  if (month === 2) {
+    const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    if (isLeapYear && day > 29) return false;
+    if (!isLeapYear && day > 28) return false;
+  }
+  
+  return true;
+};
+
+const parseDateString = (dateStr: string): { day: number; month: number; year: number; valid: boolean } => {
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return { day: 0, month: 0, year: 0, valid: false };
+  
+  const day = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const year = parseInt(parts[2], 10);
+  
+  if (isNaN(day) || isNaN(month) || isNaN(year)) {
+    return { day: 0, month: 0, year: 0, valid: false };
+  }
+  
+  const valid = isValidDate(day, month, year);
+  return { day, month, year, valid };
+};
+
+const formatDateForInput = (dateStr: string): string => {
+  const { day, month, year, valid } = parseDateString(dateStr);
+  if (!valid) return '';
+  
+  // Convert to YYYY-MM-DD for input[type="date"]
+  return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+};
+
+const formatDateForDisplay = (dateStr: string): string => {
+  const { day, month, year, valid } = parseDateString(dateStr);
+  if (!valid) return dateStr;
+  
+  return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+};
+
+const isFutureDate = (day: number, month: number, year: number): boolean => {
+  const inputDate = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return inputDate > today;
+};
+
+const calculateAgeFromDDMMYYYY = (dateStr: string): { years: number; months: number; days: number } => {
+  const { day, month, year, valid } = parseDateString(dateStr);
+  if (!valid) return { years: 0, months: 0, days: 0 };
+
+  const birthDate = new Date(year, month - 1, day);
+  const today = new Date();
+
+  let years = today.getFullYear() - birthDate.getFullYear();
+  let months = today.getMonth() - birthDate.getMonth();
+  let days = today.getDate() - birthDate.getDate();
+
+  if (days < 0) {
+    months--;
+    const previousMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+    days += previousMonth;
+  }
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  return { years, months, days };
+};
+
+// Date input component with DD/MM/YYYY format
+const DateInput: React.FC<{
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  required?: boolean;
+  maxDate?: string; // in DD/MM/YYYY format
+}> = ({ value, onChange, label, required = false, maxDate }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const [error, setError] = useState('');
+
+  const validateDate = (dateStr: string): boolean => {
+    if (!dateStr.trim()) {
+      setError(required ? 'তারিখ প্রয়োজন' : '');
+      return !required;
+    }
+
+    const { day, month, year, valid } = parseDateString(dateStr);
+    
+    if (!valid) {
+      setError('অবৈধ তারিখ ফরম্যাট। DD/MM/YYYY ব্যবহার করুন');
+      return false;
+    }
+
+    if (year < 1900) {
+      setError('বছর ১৯০০ এর কম হতে পারবে না');
+      return false;
+    }
+
+    if (isFutureDate(day, month, year)) {
+      setError('ভবিষ্যতের তারিখ গ্রহণযোগ্য নয়');
+      return false;
+    }
+
+    if (maxDate) {
+      const maxDateParsed = parseDateString(maxDate);
+      if (maxDateParsed.valid) {
+        const inputDate = new Date(year, month - 1, day);
+        const maxDateObj = new Date(maxDateParsed.year, maxDateParsed.month - 1, maxDateParsed.day);
+        if (inputDate > maxDateObj) {
+          setError(`তারিখ ${maxDate} এর আগে হতে হবে`);
+          return false;
+        }
+      }
+    }
+
+    setError('');
+    return true;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let input = e.target.value;
+    
+    // Auto-format as user types
+    input = input.replace(/\D/g, ''); // Remove non-digits
+    
+    if (input.length > 2 && input.length <= 4) {
+      input = input.slice(0, 2) + '/' + input.slice(2);
+    } else if (input.length > 4) {
+      input = input.slice(0, 2) + '/' + input.slice(2, 4) + '/' + input.slice(4, 8);
+    }
+    
+    setDisplayValue(input);
+    
+    if (input.length === 10) {
+      if (validateDate(input)) {
+        onChange(input);
+      }
+    } else {
+      setError('');
+    }
+  };
+
+  const handleBlur = () => {
+    if (displayValue) {
+      validateDate(displayValue);
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type="text"
+        value={displayValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder="DD/MM/YYYY"
+        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+          error ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+        }`}
+        maxLength={10}
+      />
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+      {value && !error && (
+        <p className="text-green-600 dark:text-green-400 text-sm">
+          বৈধ তারিখ: {formatDateForDisplay(value)}
+        </p>
+      )}
+    </div>
+  );
+};
 
 // Address Selector Modal Component
 const AddressSelectorModal: React.FC<{
@@ -538,7 +713,10 @@ const AddressSelectorModal: React.FC<{
     includeMeta = true
   ) => (
     <div className="space-y-1">
-      <label htmlFor={id} className="block font-medium text-gray-700">
+      <label
+        htmlFor={id}
+        className="block font-medium text-gray-700 dark:text-gray-300"
+      >
         {label} <span className="text-red-500">*</span>
       </label>
       <select
@@ -546,7 +724,7 @@ const AddressSelectorModal: React.FC<{
         ref={ref}
         value={value}
         onChange={onChange}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
         disabled={isLoading}
       >
         <option value="-1">-- নির্বাচন করুন --</option>
@@ -576,17 +754,21 @@ const AddressSelectorModal: React.FC<{
           );
         })}
       </select>
-      {isLoading && <p className="text-sm text-blue-600">লোড হচ্ছে...</p>}
+      {isLoading && (
+        <p className="text-sm text-blue-600 dark:text-blue-400">লোড হচ্ছে...</p>
+      )}
     </div>
   );
 
   const renderAddressInputs = () => (
-    <div className="space-y-4 mt-4 p-4 bg-gray-50 rounded-lg">
-      <h4 className="font-semibold text-gray-800">অতিরিক্ত ঠিকানা তথ্য</h4>
+    <div className="space-y-4 mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <h4 className="font-semibold text-gray-800 dark:text-gray-200">
+        অতিরিক্ত ঠিকানা তথ্য
+      </h4>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block font-medium mb-1 text-gray-700">
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
             ডাকঘর (বাংলায়)
           </label>
           <input
@@ -595,13 +777,13 @@ const AddressSelectorModal: React.FC<{
             onChange={(e) =>
               handleAddressInputChange("postOfc", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder="ডাকঘরের নাম বাংলায়"
           />
         </div>
 
         <div>
-          <label className="block font-medium mb-1 text-gray-700">
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
             ডাকঘর (ইংরেজিতে)
           </label>
           <input
@@ -610,13 +792,13 @@ const AddressSelectorModal: React.FC<{
             onChange={(e) =>
               handleAddressInputChange("postOfcEn", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder="Post Office Name in English"
           />
         </div>
 
         <div>
-          <label className="block font-medium mb-1 text-gray-700">
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
             গ্রাম / পাড়া / মহল্লা{" "}
             {selected.country !== "1" && (
               <span className="text-red-500">*</span>
@@ -627,7 +809,7 @@ const AddressSelectorModal: React.FC<{
             onChange={(e) =>
               handleAddressInputChange("vilAreaTownBn", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder="গ্রাম/পাড়া/মহল্লার নাম বাংলায়"
             rows={3}
             required={selected.country !== "1"}
@@ -635,7 +817,7 @@ const AddressSelectorModal: React.FC<{
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             গ্রাম / পাড়া / মহল্লা (ইংরেজি){" "}
             {selected.country !== "1" && (
               <span className="text-red-500">*</span>
@@ -646,7 +828,7 @@ const AddressSelectorModal: React.FC<{
             onChange={(e) =>
               handleAddressInputChange("vilAreaTownEn", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder="Village/Area/Town in English"
             rows={3}
             required={selected.country !== "1"}
@@ -654,7 +836,7 @@ const AddressSelectorModal: React.FC<{
         </div>
 
         <div>
-          <label className="block font-medium mb-1 text-gray-700">
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
             বাসা ও সড়ক (নাম, নম্বর)
           </label>
           <textarea
@@ -662,14 +844,14 @@ const AddressSelectorModal: React.FC<{
             onChange={(e) =>
               handleAddressInputChange("houseRoadBn", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder="বাসা ও সড়কের বিবরণ বাংলায়"
             rows={3}
           />
         </div>
 
         <div>
-          <label className="block font-medium mb-1 text-gray-700">
+          <label className="block font-medium mb-1 text-gray-700 dark:text-gray-300">
             বাসা ও সড়ক (নাম, নম্বর) (ইংরেজি)
           </label>
           <textarea
@@ -677,7 +859,7 @@ const AddressSelectorModal: React.FC<{
             onChange={(e) =>
               handleAddressInputChange("houseRoadEn", e.target.value)
             }
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             placeholder="House and Road details in English"
             rows={3}
           />
@@ -689,10 +871,12 @@ const AddressSelectorModal: React.FC<{
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+            {title}
+          </h2>
         </div>
 
         <div className="p-6 space-y-6">
@@ -700,7 +884,7 @@ const AddressSelectorModal: React.FC<{
             "country",
             "দেশ",
             selected.country,
-            countriesList,
+            countriesListb,
             false,
             handleCountry,
             refs.country as React.RefObject<HTMLSelectElement>,
@@ -716,7 +900,7 @@ const AddressSelectorModal: React.FC<{
                 options.division,
                 loading.division,
                 handleDivision,
-                refs.division as React.RefObject<HTMLSelectElement>,
+                refs.division as React.RefObject<HTMLSelectElement>
               )}
 
               {selected.division &&
@@ -728,7 +912,7 @@ const AddressSelectorModal: React.FC<{
                   options.district,
                   loading.district,
                   handleDistrict,
-                  refs.district  as React.RefObject<HTMLSelectElement>,
+                  refs.district as React.RefObject<HTMLSelectElement>
                 )}
 
               {selected.district &&
@@ -740,12 +924,12 @@ const AddressSelectorModal: React.FC<{
                   options.upazila,
                   loading.upazila,
                   handleUpazila,
-                  refs.upazila as React.RefObject<HTMLSelectElement>,
+                  refs.upazila as React.RefObject<HTMLSelectElement>
                 )}
 
               {selected.upazila && selected.upazila !== "-1" && (
                 <>
-                  <label className="block font-medium text-gray-700">
+                  <label className="block font-medium text-gray-700 dark:text-gray-300">
                     ইউনিয়ন / পৌরসভা / ক্যান্টনমেন্ট{" "}
                     <span className="text-red-500">*</span>
                   </label>
@@ -754,7 +938,7 @@ const AddressSelectorModal: React.FC<{
                     ref={refs.union}
                     value={selected.union}
                     onChange={handleUnion}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     disabled={loading.union}
                   >
                     <option value="-1">-- নির্বাচন করুন --</option>
@@ -785,7 +969,9 @@ const AddressSelectorModal: React.FC<{
                     })}
                   </select>
                   {loading.union && (
-                    <p className="text-sm text-blue-600">লোড হচ্ছে...</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      লোড হচ্ছে...
+                    </p>
                   )}
                 </>
               )}
@@ -813,11 +999,11 @@ const AddressSelectorModal: React.FC<{
             renderAddressInputs()}
         </div>
 
-        <div className="p-6 border-t flex justify-end space-x-3">
+        <div className="p-6 border-t dark:border-gray-700 flex justify-end space-x-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
             বাতিল
           </button>
@@ -886,11 +1072,11 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="block font-semibold text-gray-800">
+        <label className="block font-semibold text-gray-800 dark:text-gray-200">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
         {hasValidAddress && (
-          <span className="text-green-600 text-sm">
+          <span className="text-green-600 dark:text-green-400 text-sm">
             ✓ ঠিকানা নির্বাচন করা হয়েছে
           </span>
         )}
@@ -900,7 +1086,7 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
-          className="w-full px-4 py-3 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg text-blue-700 hover:bg-blue-100 hover:border-blue-400 transition-colors flex flex-col items-center justify-center"
+          className="w-full px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 hover:border-blue-400 dark:hover:border-blue-500 transition-colors flex flex-col items-center justify-center"
         >
           <svg
             className="w-6 h-6 mb-2"
@@ -919,18 +1105,20 @@ const BDRISGeoSelector: React.FC<GeoSelectorProps> = ({
         </button>
 
         {selectedAddress && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h4 className="font-semibold text-green-800 mb-2">
+          <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <h4 className="font-semibold text-green-800 dark:text-green-400 mb-2">
               নির্বাচিত ঠিকানা:
             </h4>
-            <p className="text-green-700 text-sm">{getAddressSummary()}</p>
+            <p className="text-green-700 dark:text-green-300 text-sm">
+              {getAddressSummary()}
+            </p>
             {selectedAddress.houseRoadBn && (
-              <p className="text-green-600 text-sm mt-1">
+              <p className="text-green-600 dark:text-green-400 text-sm mt-1">
                 বাসা/সড়ক: {selectedAddress.houseRoadBn}
               </p>
             )}
             {selectedAddress.postOfc && (
-              <p className="text-green-600 text-sm">
+              <p className="text-green-600 dark:text-green-400 text-sm">
                 ডাকঘর: {selectedAddress.postOfc}
               </p>
             )}
@@ -957,7 +1145,7 @@ interface PersonInfo {
   personFirstNameEn: string;
   personLastNameEn: string;
   personNameEn: string;
-  personBirthDate: string;
+  personBirthDate: string; // DD/MM/YYYY format
   thChild: string;
   gender: string;
   religion: string;
@@ -968,7 +1156,7 @@ interface PersonInfo {
 interface ParentInfo {
   id: string;
   ubrn: string;
-  personBirthDate: string;
+  personBirthDate: string; // DD/MM/YYYY format
   personNameBn: string;
   personNameEn: string;
   personNid: string;
@@ -987,6 +1175,7 @@ interface ApplicantInfo {
 interface FormData {
   officeAddressType: "BIRTHPLACE" | "PERMANENT" | "MISSION" | "";
   officeAddrCountry: string;
+  officeAddrCity: string;
   officeAddrDivision: string;
   officeAddrDistrict: string;
   officeAddrUpazila: string;
@@ -1048,15 +1237,15 @@ interface UploadedFile {
 type NestedFormSection = PersonInfo | ParentInfo | ApplicantInfo;
 
 const isPersonInfo = (obj: NestedFormSection): obj is PersonInfo => {
-  return 'personFirstNameBn' in obj && 'personLastNameBn' in obj;
+  return "personFirstNameBn" in obj && "personLastNameBn" in obj;
 };
 
 const isParentInfo = (obj: NestedFormSection): obj is ParentInfo => {
-  return 'personNameBn' in obj && 'personNationality' in obj && 'ubrn' in obj;
+  return "personNameBn" in obj && "personNationality" in obj && "ubrn" in obj;
 };
 
 const isApplicantInfo = (obj: NestedFormSection): obj is ApplicantInfo => {
-  return 'name' in obj && 'phone' in obj && 'relation' in obj;
+  return "name" in obj && "phone" in obj && "relation" in obj;
 };
 
 // Helper function to safely set nested object properties
@@ -1067,8 +1256,29 @@ const setNestedValue = <T extends NestedFormSection>(
 ): T => {
   return {
     ...obj,
-    [field]: value
+    [field]: value,
   };
+};
+
+// Validation functions
+const validateEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePhone = (phone: string): boolean => {
+  const phoneRegex = /^(?:\+88|01)?\d{9,11}$/;
+  return phoneRegex.test(phone.replace(/\s/g, ''));
+};
+
+const validateNID = (nid: string): boolean => {
+  const nidRegex = /^\d{10,17}$/;
+  return nidRegex.test(nid.replace(/\s/g, ''));
+};
+
+const validatePassport = (passport: string): boolean => {
+  const passportRegex = /^[A-Z0-9]{6,9}$/;
+  return passportRegex.test(passport);
 };
 
 // Main Birth Registration Form Component
@@ -1080,6 +1290,7 @@ export default function BirthRegistrationForm({
   const [formData, setFormData] = useState<FormData>({
     officeAddressType: "",
     officeAddrCountry: "",
+    officeAddrCity: "",
     officeAddrDivision: "",
     officeAddrDistrict: "",
     officeAddrUpazila: "",
@@ -1132,10 +1343,10 @@ export default function BirthRegistrationForm({
       relation: "",
     },
   });
-  
+
   console.log(cookieString);
   console.log(csrf);
-  
+
   const [bdMissionChecked, setBdMissionChecked] = useState(false);
   const [age, setAge] = useState<{
     years: number;
@@ -1153,6 +1364,16 @@ export default function BirthRegistrationForm({
   const [validateBirthPlace, setValidateBirthPlace] = useState(false);
   const [validatePermAddress, setValidatePermAddress] = useState(false);
 
+  // BD Mission Office Selection States
+  const [officeCities, setOfficeCities] = useState<GeoLocation[]>([]);
+  const [officeOptions, setOfficeOptions] = useState<GeoLocation[]>([]);
+  const [loadingOfficeCities, setLoadingOfficeCities] = useState(false);
+  const [loadingOfficeOptions, setLoadingOfficeOptions] = useState(false);
+  const [countryTargetGeoOrder, setCountryTargetGeoOrder] = useState<number>(9); // Default to 9
+
+  // Form validation state
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   // Mock file types
   const fileTypes: FileType[] = [
     { id: "1", name: "জন্ম সনদ" },
@@ -1169,39 +1390,16 @@ export default function BirthRegistrationForm({
       ...prev,
       [field]: value,
     }));
+
+    // Clear error when field is updated
+    if (formErrors[field]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
   };
-
-  function calculateAge(birthDateString: string): {
-    years: number;
-    months: number;
-    days: number;
-  } {
-    const birthDate = new Date(birthDateString);
-    const today = new Date();
-
-    let years = today.getFullYear() - birthDate.getFullYear();
-    let months = today.getMonth() - birthDate.getMonth();
-    let days = today.getDate() - birthDate.getDate();
-
-    // Adjust days
-    if (days < 0) {
-      months--;
-      const previousMonth = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        0
-      ).getDate();
-      days += previousMonth;
-    }
-
-    // Adjust months
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-
-    return { years, months, days };
-  }
 
   const handleNestedInputChange = (
     section: keyof Pick<
@@ -1213,27 +1411,52 @@ export default function BirthRegistrationForm({
   ) => {
     setFormData((prev) => {
       const currentSection = prev[section];
-      
+
       // Type-safe update based on section type
       if (section === "personInfoForBirth" && isPersonInfo(currentSection)) {
         return {
           ...prev,
-          [section]: setNestedValue(currentSection, field as keyof PersonInfo, value),
+          [section]: setNestedValue(
+            currentSection,
+            field as keyof PersonInfo,
+            value
+          ),
         };
-      } else if ((section === "father" || section === "mother") && isParentInfo(currentSection)) {
+      } else if (
+        (section === "father" || section === "mother") &&
+        isParentInfo(currentSection)
+      ) {
         return {
           ...prev,
-          [section]: setNestedValue(currentSection, field as keyof ParentInfo, value),
+          [section]: setNestedValue(
+            currentSection,
+            field as keyof ParentInfo,
+            value
+          ),
         };
       } else if (section === "applicant" && isApplicantInfo(currentSection)) {
         return {
           ...prev,
-          [section]: setNestedValue(currentSection, field as keyof ApplicantInfo, value),
+          [section]: setNestedValue(
+            currentSection,
+            field as keyof ApplicantInfo,
+            value
+          ),
         };
       }
-      
+
       return prev;
     });
+
+    // Clear error when field is updated
+    const errorKey = `${section}.${field}`;
+    if (formErrors[errorKey]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[errorKey];
+        return newErrors;
+      });
+    }
   };
 
   const handleBirthPlaceAddress = (address: Address) => {
@@ -1241,6 +1464,7 @@ export default function BirthRegistrationForm({
       ...prev,
       birthPlaceAddress: address,
     }));
+    setValidateBirthPlace(false);
   };
 
   const handlePermAddrAddress = (address: Address) => {
@@ -1248,12 +1472,173 @@ export default function BirthRegistrationForm({
       ...prev,
       permAddrAddress: address,
     }));
+    setValidatePermAddress(false);
   };
 
-  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const birthDate = e.target.value;
+  const handleBirthDateChange = (birthDate: string) => {
     handleNestedInputChange("personInfoForBirth", "personBirthDate", birthDate);
-    setAge(calculateAge(birthDate));
+    setAge(calculateAgeFromDDMMYYYY(birthDate));
+  };
+
+  // BD Mission Office Selection Handlers - UPDATED with dynamic targetGeoOrder
+  const handleOfficeCountryChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const countryId = e.target.value;
+    handleInputChange("officeAddrCountry", countryId);
+
+    // Reset city and office when country changes
+    handleInputChange("officeAddrCity", "");
+    handleInputChange("officeAddrOffice", "");
+    setOfficeCities([]);
+    setOfficeOptions([]);
+
+    if (!countryId) return;
+
+    // Load cities for selected country
+    setLoadingOfficeCities(true);
+    try {
+      const response = await fetch("/api/officeAddress", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: countryId,
+          geoOrder: "0",
+          geoType: "10",
+          csrf: csrf,
+          cookie: cookieString,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data: OfficeGeoResponse = await response.json();
+      console.log("Country API Response:", data);
+
+      // Store the targetGeoOrder from country response for later use
+      if (data.targetGeoOrder) {
+        setCountryTargetGeoOrder(data.targetGeoOrder);
+      }
+
+      let cities: GeoLocation[] = [];
+
+      if (data.geoObject) {
+        if (Array.isArray(data.geoObject)) {
+          cities = data.geoObject;
+        } else {
+          // If it's a single object, convert to array
+          cities = [data.geoObject];
+        }
+      }
+
+      const formattedCities = cities.map((city) => ({
+        ...city,
+        id: city.id.toString(),
+        nameBn: (city.nameBn || "").replace(/</g, "&lt;"),
+        nameEn: (city.nameEn || "").replace(/</g, "&lt;"),
+      }));
+
+      console.log("Formatted Cities:", formattedCities);
+      setOfficeCities(formattedCities);
+
+      if (formattedCities.length === 0) {
+        toast.error("এই দেশের জন্য কোন শহর পাওয়া যায়নি");
+      }
+    } catch (error) {
+      console.error("Error loading office cities:", error);
+      toast.error("শহর লোড করতে সমস্যা হয়েছে");
+      setOfficeCities([]);
+    } finally {
+      setLoadingOfficeCities(false);
+    }
+  };
+
+  const handleOfficeCityChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const cityId = e.target.value;
+    handleInputChange("officeAddrCity", cityId);
+
+    // Reset office when city changes
+    handleInputChange("officeAddrOffice", "");
+    setOfficeOptions([]);
+
+    if (!cityId) return;
+
+    // Find selected city to get geoLevelId
+    const selectedCity = officeCities.find((city) => city.id === cityId);
+    if (!selectedCity) {
+      console.error("Selected city not found:", cityId);
+      return;
+    }
+
+    console.log("Selected City:", selectedCity);
+
+    // Load offices for selected city using dynamic targetGeoOrder from country response
+    setLoadingOfficeOptions(true);
+    try {
+      const response = await fetch("/api/officeAddress", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: cityId,
+          geoOrder: countryTargetGeoOrder.toString(), // Use dynamic targetGeoOrder from country response
+          geoType: selectedCity.geoLevelId?.toString() || "11", // Use city's geoLevelId
+          csrf: csrf,
+          cookie: cookieString,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data: OfficeGeoResponse = await response.json();
+      console.log("City API Response:", data);
+
+      let offices: GeoLocation[] = [];
+
+      if (data.geoObject) {
+        if (Array.isArray(data.geoObject)) {
+          offices = data.geoObject;
+        } else {
+          // If it's a single object, convert to array
+          offices = [data.geoObject];
+        }
+      }
+
+      const formattedOffices = offices.map((office) => ({
+        ...office,
+        id: office.id.toString(),
+        nameBn: office.officeNameBn || office.nameBn || "",
+        nameEn: office.officeNameEn || office.nameEn || "",
+      }));
+
+      console.log("Formatted Offices:", formattedOffices);
+      setOfficeOptions(formattedOffices);
+
+      // Auto-select the office if there's only one option
+      if (formattedOffices.length === 1) {
+        handleInputChange("officeAddrOffice", formattedOffices[0].id);
+        toast.success("অফিস স্বয়ংক্রিয়ভাবে নির্বাচিত হয়েছে");
+      }
+
+      if (formattedOffices.length === 0) {
+        toast.error("এই শহরের জন্য কোন অফিস পাওয়া যায়নি");
+      }
+    } catch (error) {
+      console.error("Error loading office options:", error);
+      toast.error("অফিস লোড করতে সমস্যা হয়েছে");
+      setOfficeOptions([]);
+    } finally {
+      setLoadingOfficeOptions(false);
+    }
   };
 
   // Drag and drop handlers
@@ -1281,7 +1666,22 @@ export default function BirthRegistrationForm({
   };
 
   const handleFilesSelection = (files: File[]) => {
-    const newUploadingFiles: UploadingFile[] = files.map((file) => ({
+    const validFiles = files.filter(file => {
+      const isValidType = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'].includes(file.type);
+      const isValidSize = file.size <= 2 * 1024 * 1024; // 2MB
+      
+      if (!isValidType) {
+        toast.error(`${file.name}: শুধুমাত্র JPG, PNG, PDF ফাইল গ্রহণযোগ্য`);
+        return false;
+      }
+      if (!isValidSize) {
+        toast.error(`${file.name}: ফাইলের আকার 2MB এর কম হতে হবে`);
+        return false;
+      }
+      return true;
+    });
+
+    const newUploadingFiles: UploadingFile[] = validFiles.map((file) => ({
       file,
       fileTypeId: "-1",
       progress: 0,
@@ -1331,6 +1731,7 @@ export default function BirthRegistrationForm({
         fileType: fileTypes.find((t) => t.id === uploadingFile.fileTypeId)
           ?.name,
         size: uploadingFile.file.size,
+        uploadedId: `uploaded-${Date.now()}-${index}`,
       };
 
       // Add to uploaded files
@@ -1354,8 +1755,192 @@ export default function BirthRegistrationForm({
     setUploadingFiles((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const removeUploadedFile = (id: string) => {
+    setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
+  };
+
+  // Comprehensive validation function for each step
+  const validateStep = (step: number): boolean => {
+    const errors: Record<string, string> = {};
+
+    switch (step) {
+      case 1:
+        if (!formData.officeAddressType) {
+          errors.officeAddressType = "অফিসের ধরন নির্বাচন করুন";
+        }
+
+        if (formData.officeAddressType === "MISSION") {
+          if (!formData.officeAddrCountry) {
+            errors.officeAddrCountry = "দেশ নির্বাচন করুন";
+          }
+          if (!formData.officeAddrCity) {
+            errors.officeAddrCity = "শহর নির্বাচন করুন";
+          }
+          if (!formData.officeAddrOffice) {
+            errors.officeAddrOffice = "অফিস নির্বাচন করুন";
+          }
+        }
+        break;
+
+      case 2:
+        // Personal information validation
+        if (!formData.personInfoForBirth.personFirstNameBn.trim()) {
+          errors["personInfoForBirth.personFirstNameBn"] = "নামের প্রথম অংশ বাংলায় প্রয়োজন";
+        }
+        if (!formData.personInfoForBirth.personLastNameBn.trim()) {
+          errors["personInfoForBirth.personLastNameBn"] = "নামের শেষ অংশ বাংলায় প্রয়োজন";
+        }
+        if (!formData.personInfoForBirth.personFirstNameEn.trim()) {
+          errors["personInfoForBirth.personFirstNameEn"] = "নামের প্রথম অংশ ইংরেজিতে প্রয়োজন";
+        }
+        if (!formData.personInfoForBirth.personLastNameEn.trim()) {
+          errors["personInfoForBirth.personLastNameEn"] = "নামের শেষ অংশ ইংরেজিতে প্রয়োজন";
+        }
+        if (!formData.personInfoForBirth.personBirthDate) {
+          errors["personInfoForBirth.personBirthDate"] = "জন্ম তারিখ প্রয়োজন";
+        } else {
+          const { valid } = parseDateString(formData.personInfoForBirth.personBirthDate);
+          if (!valid) {
+            errors["personInfoForBirth.personBirthDate"] = "বৈধ তারিখ দিন (DD/MM/YYYY)";
+          }
+        }
+        if (!formData.personInfoForBirth.thChild) {
+          errors["personInfoForBirth.thChild"] = "পিতা-মাতার কততম সন্তান নির্বাচন করুন";
+        }
+        if (!formData.personInfoForBirth.gender) {
+          errors["personInfoForBirth.gender"] = "লিঙ্গ নির্বাচন করুন";
+        }
+
+
+        // Birth place address validation
+        if (!formData.birthPlaceAddress) {
+          errors.birthPlaceAddress = "জন্মস্থানের ঠিকানা নির্বাচন করুন";
+        }
+        break;
+
+      case 3:
+        // Father information validation
+        if (!formData.father.personNameBn.trim()) {
+          errors["father.personNameBn"] = "পিতার নাম বাংলায় প্রয়োজন";
+        }
+        if (!formData.father.personNameEn.trim()) {
+          errors["father.personNameEn"] = "পিতার নাম ইংরেজিতে প্রয়োজন";
+        }
+        if (!formData.father.personNationality) {
+          errors["father.personNationality"] = "পিতার জাতীয়তা নির্বাচন করুন";
+        }
+
+        // Father date validation
+        if (formData.father.personBirthDate) {
+          const { valid } = parseDateString(formData.father.personBirthDate);
+          if (!valid) {
+            errors["father.personBirthDate"] = "বৈধ তারিখ দিন (DD/MM/YYYY)";
+          }
+        }
+
+        // Father NID validation
+        if (formData.father.personNid && !validateNID(formData.father.personNid)) {
+          errors["father.personNid"] = "বৈধ জাতীয় পরিচয়পত্র নম্বর দিন";
+        }
+
+        // Father passport validation
+        if (formData.father.passportNumber && !validatePassport(formData.father.passportNumber)) {
+          errors["father.passportNumber"] = "বৈধ পাসপোর্ট নম্বর দিন";
+        }
+
+        // Mother information validation
+        if (!formData.mother.personNameBn.trim()) {
+          errors["mother.personNameBn"] = "মাতার নাম বাংলায় প্রয়োজন";
+        }
+        if (!formData.mother.personNameEn.trim()) {
+          errors["mother.personNameEn"] = "মাতার নাম ইংরেজিতে প্রয়োজন";
+        }
+        if (!formData.mother.personNationality) {
+          errors["mother.personNationality"] = "মাতার জাতীয়তা নির্বাচন করুন";
+        }
+
+        // Mother date validation
+        if (formData.mother.personBirthDate) {
+          const { valid } = parseDateString(formData.mother.personBirthDate);
+          if (!valid) {
+            errors["mother.personBirthDate"] = "বৈধ তারিখ দিন (DD/MM/YYYY)";
+          }
+        }
+
+        // Mother NID validation
+        if (formData.mother.personNid && !validateNID(formData.mother.personNid)) {
+          errors["mother.personNid"] = "বৈধ জাতীয় পরিচয়পত্র নম্বর দিন";
+        }
+
+        // Mother passport validation
+        if (formData.mother.passportNumber && !validatePassport(formData.mother.passportNumber)) {
+          errors["mother.passportNumber"] = "বৈধ পাসপোর্ট নম্বর দিন";
+        }
+        break;
+
+      case 4:
+        // Permanent address validation
+        if (!formData.copyBirthPlaceToPermAddr && !formData.permAddrAddress) {
+          errors.permAddrAddress = "স্থায়ী ঠিকানা নির্বাচন করুন";
+        }
+
+        // Applicant information validation
+        if (!formData.applicant.name.trim()) {
+          errors["applicant.name"] = "আবেদনকারীর নাম প্রয়োজন";
+        }
+        if (!formData.applicant.phone.trim()) {
+          errors["applicant.phone"] = "মোবাইল নম্বর প্রয়োজন";
+        } else if (!validatePhone(formData.applicant.phone)) {
+          errors["applicant.phone"] = "বৈধ মোবাইল নম্বর দিন";
+        }
+        if (!formData.applicant.relation) {
+          errors["applicant.relation"] = "সম্পর্ক নির্বাচন করুন";
+        }
+
+        // Email validation if provided
+        if (formData.applicant.email && !validateEmail(formData.applicant.email)) {
+          errors["applicant.email"] = "বৈধ ইমেইল ঠিকানা দিন";
+        }
+
+        // Applicant NID validation if provided
+        if (formData.applicant.nid && !validateNID(formData.applicant.nid)) {
+          errors["applicant.nid"] = "বৈধ জাতীয় পরিচয়পত্র নম্বর দিন";
+        }
+
+        // File upload validation
+        if (uploadedFiles.length === 0) {
+          errors.attachments = "কমপক্ষে একটি ডকুমেন্ট আপলোড করুন";
+        } else {
+          // Check if all files have file types selected and are uploaded
+          const filesWithoutTypes = uploadedFiles.filter(file => !file.fileType);
+          const pendingUploads = uploadedFiles.filter(file => !file.uploadedId);
+          
+          if (filesWithoutTypes.length > 0) {
+            errors.attachments = "সকল ফাইলের জন্য ফাইল টাইপ নির্বাচন করুন";
+          } else if (pendingUploads.length > 0) {
+            errors.attachments = "সকল ফাইল আপলোড সম্পন্ন করুন";
+          }
+        }
+        break;
+    }
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      // Scroll to first error
+      const firstErrorKey = Object.keys(errors)[0];
+      const errorElement = document.querySelector(`[data-field="${firstErrorKey}"]`);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return false;
+    }
+
+    return true;
+  };
+
   const nextStep = () => {
-    if (validateCurrentStep()) {
+    if (validateStep(currentStep)) {
       // Reset validation triggers
       setValidateBirthPlace(false);
       setValidatePermAddress(false);
@@ -1372,126 +1957,10 @@ export default function BirthRegistrationForm({
     setCurrentStep((prev) => prev - 1);
   };
 
-  const validateCurrentStep = (): boolean => {
-    switch (currentStep) {
-      case 1:
-        if (!formData.officeAddressType) {
-          toast.error("দয়া করে অফিসের ধরন নির্বাচন করুন");
-          return false;
-        }
-
-        // Only validate office address fields if MISSION is selected
-        if (formData.officeAddressType === "MISSION") {
-          if (!formData.officeAddrCountry) {
-            toast.error("দয়া করে দেশ নির্বাচন করুন");
-            return false;
-          }
-          if (!formData.officeAddrOffice) {
-            toast.error("দয়া করে অফিস নির্বাচন করুন");
-            return false;
-          }
-        }
-
-        // For BIRTHPLACE and PERMANENT, no need to validate office address fields
-        return true;
-
-      case 2:
-        // Validate personal information
-        if (
-          !formData.personInfoForBirth.personFirstNameBn ||
-          !formData.personInfoForBirth.personLastNameBn ||
-          !formData.personInfoForBirth.personBirthDate ||
-          !formData.personInfoForBirth.gender ||
-          !formData.personInfoForBirth.thChild
-        ) {
-          toast.error("দয়া করে সকল প্রয়োজনীয় তথ্য প্রদান করুন");
-          return false;
-        }
-
-        // Trigger validation for birth place address
-        setValidateBirthPlace(true);
-
-        // Wait a bit for the validation to complete, then check
-        setTimeout(() => {
-          if (!formData.birthPlaceAddress) {
-            toast.error("দয়া করে জন্মস্থানের ঠিকানা সম্পূর্ণ করুন");
-          }
-        }, 100);
-
-        return !!formData.birthPlaceAddress;
-
-      case 3:
-        if (
-          !formData.father.personNameBn ||
-          !formData.father.personNationality ||
-          !formData.mother.personNameBn ||
-          !formData.mother.personNationality
-        ) {
-          toast.error("দয়া করে পিতা-মাতার সকল প্রয়োজনীয় তথ্য প্রদান করুন");
-          return false;
-        }
-        return true;
-
-      case 4:
-        if (!formData.copyBirthPlaceToPermAddr) {
-          // Trigger validation for permanent address
-          setValidatePermAddress(true);
-
-          // Wait a bit for the validation to complete, then check
-          setTimeout(() => {
-            if (!formData.permAddrAddress) {
-              toast.error("দয়া করে স্থায়ী ঠিকানা সম্পূর্ণ করুন");
-            }
-          }, 100);
-
-          if (!formData.permAddrAddress) {
-            return false;
-          }
-        }
-
-        if (
-          !formData.applicant.name ||
-          !formData.applicant.phone ||
-          !formData.applicant.relation
-        ) {
-          toast.error("দয়া করে আবেদনকারীর সকল প্রয়োজনীয় তথ্য প্রদান করুন");
-          return false;
-        }
-
-        // Check if at least one file is uploaded
-        if (uploadedFiles.length === 0) {
-          toast.error("দয়া করে কমপক্ষে একটি ডকুমেন্ট আপলোড করুন");
-          return false;
-        }
-
-        // Check if all files have file types selected
-        const filesWithoutTypes = uploadedFiles.filter(
-          (file) => !file.fileType
-        );
-        if (filesWithoutTypes.length > 0) {
-          toast.error("দয়া করে সকল ফাইলের জন্য ফাইল টাইপ নির্বাচন করুন");
-          return false;
-        }
-
-        // Check if all files are uploaded
-        const pendingUploads = uploadedFiles.filter(
-          (file) => !file.uploadedId && !file.isUploading
-        );
-        if (pendingUploads.length > 0) {
-          toast.error("দয়া করে সকল ফাইল আপলোড সম্পন্ন করুন");
-          return false;
-        }
-        return true;
-
-      default:
-        return true;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateCurrentStep()) {
+    if (!validateStep(currentStep)) {
       return;
     }
 
@@ -1501,6 +1970,7 @@ export default function BirthRegistrationForm({
         _csrf: csrf,
         officeAddressType: formData.officeAddressType,
         officeAddrCountry: formData.officeAddrCountry,
+        officeAddrCity: formData.officeAddrCity,
         officeAddrDivision: formData.birthPlaceAddress?.division || "-1",
         officeAddrDistrict: formData.birthPlaceAddress?.district || "-1",
         officeAddrCityCorpCantOrUpazila:
@@ -1508,6 +1978,7 @@ export default function BirthRegistrationForm({
         officeAddrPaurasavaOrUnion:
           formData.birthPlaceAddress?.paurasavaOrUnion || "-1",
         officeAddrWard: formData.birthPlaceAddress?.ward || "-1",
+        officeAddrOffice: formData.officeAddrOffice,
 
         // Personal Information
         personInfoForBirth: {
@@ -1519,10 +1990,7 @@ export default function BirthRegistrationForm({
           personLastNameEn: formData.personInfoForBirth.personLastNameEn,
           personNameEn:
             `${formData.personInfoForBirth.personFirstNameEn} ${formData.personInfoForBirth.personLastNameEn}`.trim(),
-          personBirthDate: formData.personInfoForBirth.personBirthDate
-            .split("-")
-            .reverse()
-            .join("/"),
+          personBirthDate: formData.personInfoForBirth.personBirthDate,
           thChild: formData.personInfoForBirth.thChild,
           gender: formData.personInfoForBirth.gender,
           religion: formData.personInfoForBirth.religion,
@@ -1644,20 +2112,20 @@ export default function BirthRegistrationForm({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-6xl mx-auto px-4">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 text-center mb-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white text-center mb-2">
             জন্ম নিবন্ধনের জন্য আবেদন
           </h1>
-          <p className="text-gray-600 text-center">
+          <p className="text-gray-600 dark:text-gray-300 text-center">
             Birth Registration Application Form
           </p>
         </div>
 
         {/* Progress Steps */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-center justify-between">
             {[1, 2, 3, 4].map((step) => (
               <div key={step} className="flex items-center">
@@ -1665,7 +2133,7 @@ export default function BirthRegistrationForm({
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
                     currentStep >= step
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-300 text-gray-600"
+                      : "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
                   }`}
                 >
                   {step}
@@ -1673,14 +2141,16 @@ export default function BirthRegistrationForm({
                 {step < 4 && (
                   <div
                     className={`w-20 h-1 mx-2 ${
-                      currentStep > step ? "bg-blue-600" : "bg-gray-300"
+                      currentStep > step
+                        ? "bg-blue-600"
+                        : "bg-gray-300 dark:bg-gray-600"
                     }`}
                   />
                 )}
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-2 text-sm text-gray-600">
+          <div className="flex justify-between text-center mt-2 text-sm text-gray-600 dark:text-gray-400">
             {stepTitles.map((title, index) => (
               <span key={index} className="text-center flex-1">
                 {title}
@@ -1691,19 +2161,19 @@ export default function BirthRegistrationForm({
 
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-lg shadow-md p-6"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6"
         >
           {/* Step 1: Office Selection */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                   আপনি নিম্নলিখিত কোন ঠিকানায় জন্ম নিবন্ধনের আবেদন করতে চান?
                 </h3>
 
-                {bdMissionChecked === false && (
+                {!bdMissionChecked && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <label className="flex items-center space-x-3 p-4 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                       <input
                         type="radio"
                         name="officeAddressType"
@@ -1714,10 +2184,12 @@ export default function BirthRegistrationForm({
                         }
                         className="text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-gray-700">জন্মস্থান</span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        জন্মস্থান
+                      </span>
                     </label>
 
-                    <label className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <label className="flex items-center space-x-3 p-4 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                       <input
                         type="radio"
                         name="officeAddressType"
@@ -1728,7 +2200,9 @@ export default function BirthRegistrationForm({
                         }
                         className="text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-gray-700">স্থায়ী ঠিকানা</span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        স্থায়ী ঠিকানা
+                      </span>
                     </label>
                   </div>
                 )}
@@ -1741,13 +2215,20 @@ export default function BirthRegistrationForm({
                       setBdMissionChecked(e.target.checked);
                       if (e.target.checked) {
                         handleInputChange("officeAddressType", "MISSION");
+                        // Reset office address fields when checking BD Mission
+                        handleInputChange("officeAddrCountry", "");
+                        handleInputChange("officeAddrCity", "");
+                        handleInputChange("officeAddrOffice", "");
+                        setOfficeCities([]);
+                        setOfficeOptions([]);
+                        setCountryTargetGeoOrder(9); // Reset to default
                       } else {
                         handleInputChange("officeAddressType", "");
                       }
                     }}
                     className="text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-gray-700">
+                  <span className="text-gray-700 dark:text-gray-300">
                     আপনি যদি বাংলাদেশ দূতাবাসে জন্ম নিবন্ধন আবেদন করতে চান, তবে
                     এটি নির্বাচন করুন
                   </span>
@@ -1755,48 +2236,127 @@ export default function BirthRegistrationForm({
               </div>
 
               {bdMissionChecked && (
-                <div className="border-t pt-6">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4">
+                <div className="border-t dark:border-gray-700 pt-6">
+                  <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                     নিবন্ধন কার্যালয়ের ঠিকানা
                   </h4>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Country Selection */}
+                    <div data-field="officeAddrCountry">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         দেশ <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={formData.officeAddrCountry}
-                        onChange={(e) =>
-                          handleInputChange("officeAddrCountry", e.target.value)
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onChange={handleOfficeCountryChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                          formErrors.officeAddrCountry ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         required={bdMissionChecked}
                       >
                         <option value="">দেশ নির্বাচন করুন</option>
-                        {countriesList.map((country) => (
+                        {dutaBasCountries.map((country) => (
                           <option key={country.id} value={country.id}>
                             {country.nameBn}
                           </option>
                         ))}
                       </select>
+                      {formErrors.officeAddrCountry && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors.officeAddrCountry}</p>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        অফিস <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.officeAddrOffice}
-                        onChange={(e) =>
-                          handleInputChange("officeAddrOffice", e.target.value)
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-100"
-                        readOnly
-                        required={bdMissionChecked}
-                      />
-                    </div>
+                    {/* City Selection */}
+                    {officeCities.length > 0 && (
+                      <div data-field="officeAddrCity">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          শহর <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.officeAddrCity}
+                          onChange={handleOfficeCityChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                            formErrors.officeAddrCity ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}
+                          required={bdMissionChecked}
+                          disabled={
+                            !formData.officeAddrCountry ||
+                            officeCities.length === 0
+                          }
+                        >
+                          <option value="">শহর নির্বাচন করুন</option>
+                          {officeCities.map((city) => (
+                            <option key={city.id} value={city.id}>
+                              {city.nameBn}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.officeAddrCity && (
+                          <p className="text-red-500 text-sm mt-1">{formErrors.officeAddrCity}</p>
+                        )}
+                        {loadingOfficeCities && (
+                          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                            শহর লোড হচ্ছে...
+                          </p>
+                        )}
+                        {!loadingOfficeCities &&
+                          formData.officeAddrCountry &&
+                          officeCities.length === 0 && (
+                            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                              কোন শহর পাওয়া যায়নি
+                            </p>
+                          )}
+                      </div>
+                    )}
+
+                    {/* Office Selection */}
+                    {officeOptions.length > 0 && (
+                      <div data-field="officeAddrOffice">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          অফিস <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={formData.officeAddrOffice}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "officeAddrOffice",
+                              e.target.value
+                            )
+                          }
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                            formErrors.officeAddrOffice ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                          }`}
+                          required={bdMissionChecked}
+                          disabled={
+                            !formData.officeAddrCity ||
+                            officeOptions.length === 0
+                          }
+                        >
+                          <option value="">অফিস নির্বাচন করুন</option>
+                          {officeOptions.map((office) => (
+                            <option key={office.id} value={office.id}>
+                              {office.nameBn}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.officeAddrOffice && (
+                          <p className="text-red-500 text-sm mt-1">{formErrors.officeAddrOffice}</p>
+                        )}
+                        {loadingOfficeOptions && (
+                          <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                            অফিস লোড হচ্ছে...
+                          </p>
+                        )}
+                        {!loadingOfficeOptions &&
+                          formData.officeAddrCity &&
+                          officeOptions.length === 0 && (
+                            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                              কোন অফিস পাওয়া যায়নি
+                            </p>
+                          )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1805,7 +2365,7 @@ export default function BirthRegistrationForm({
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   পরবর্তী
                 </button>
@@ -1817,13 +2377,13 @@ export default function BirthRegistrationForm({
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                   নিবন্ধনাধীন ব্যক্তির পরিচিতি
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="personInfoForBirth.personFirstNameBn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       নামের প্রথম অংশ বাংলায়{" "}
                       <span className="text-red-500">*</span>
                     </label>
@@ -1837,14 +2397,19 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["personInfoForBirth.personFirstNameBn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="নামের প্রথম অংশ বাংলায়"
                       required
                     />
+                    {formErrors["personInfoForBirth.personFirstNameBn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["personInfoForBirth.personFirstNameBn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="personInfoForBirth.personLastNameBn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       নামের শেষ অংশ বাংলায়{" "}
                       <span className="text-red-500">*</span>
                     </label>
@@ -1858,14 +2423,19 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["personInfoForBirth.personLastNameBn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="নামের শেষ অংশ বাংলায়"
                       required
                     />
+                    {formErrors["personInfoForBirth.personLastNameBn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["personInfoForBirth.personLastNameBn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="personInfoForBirth.personFirstNameEn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       নামের প্রথম অংশ ইংরেজিতে{" "}
                       <span className="text-red-500">*</span>
                     </label>
@@ -1879,14 +2449,19 @@ export default function BirthRegistrationForm({
                           e.target.value.toUpperCase()
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["personInfoForBirth.personFirstNameEn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="First Name in English"
                       required
                     />
+                    {formErrors["personInfoForBirth.personFirstNameEn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["personInfoForBirth.personFirstNameEn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="personInfoForBirth.personLastNameEn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       নামের শেষ অংশ ইংরেজিতে{" "}
                       <span className="text-red-500">*</span>
                     </label>
@@ -1900,35 +2475,35 @@ export default function BirthRegistrationForm({
                           e.target.value.toUpperCase()
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["personInfoForBirth.personLastNameEn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="Last Name in English"
                       required
                     />
+                    {formErrors["personInfoForBirth.personLastNameEn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["personInfoForBirth.personLastNameEn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      জন্ম তারিখ (খ্রিক) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      max={new Date().toISOString().split("T")[0]}
+                  <div data-field="personInfoForBirth.personBirthDate">
+                    <DateInput
                       value={formData.personInfoForBirth.personBirthDate}
                       onChange={handleBirthDateChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
+                      label="জন্ম তারিখ (খ্রিঃ)"
+                      required={true}
                     />
                     {age &&
                       (age.years > 0 || age.months > 0 || age.days > 0) && (
-                        <p className="text-sm text-green-600 mt-1">
+                        <p className="text-sm text-green-600 dark:text-green-400 mt-1">
                           বয়স: {age.years} বছর, {age.months} মাস, {age.days}{" "}
                           দিন
                         </p>
                       )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="personInfoForBirth.thChild">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতা ও মাতার কততম সন্তান{" "}
                       <span className="text-red-500">*</span>
                     </label>
@@ -1941,7 +2516,9 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["personInfoForBirth.thChild"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       required
                     >
                       <option value="">---নির্বাচন করুন---</option>
@@ -1953,10 +2530,13 @@ export default function BirthRegistrationForm({
                         )
                       )}
                     </select>
+                    {formErrors["personInfoForBirth.thChild"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["personInfoForBirth.thChild"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="personInfoForBirth.gender">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       লিঙ্গ <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -1968,7 +2548,9 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["personInfoForBirth.gender"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       required
                     >
                       <option value="">---নির্বাচন করুন---</option>
@@ -1976,12 +2558,15 @@ export default function BirthRegistrationForm({
                       <option value="FEMALE">মহিলা</option>
                       <option value="THIRD_GENDER">তৃতীয় লিঙ্গ</option>
                     </select>
+                    {formErrors["personInfoForBirth.gender"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["personInfoForBirth.gender"]}</p>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Birth Place Address - Now using modal */}
-              <div className="border-t pt-6">
+              <div className="border-t dark:border-gray-700 pt-6" data-field="birthPlaceAddress">
                 <BDRISGeoSelector
                   onApply={handleBirthPlaceAddress}
                   initial={formData.birthPlaceAddress || undefined}
@@ -1989,20 +2574,23 @@ export default function BirthRegistrationForm({
                   validateOnNext={validateBirthPlace}
                   buttonText="জন্মস্থানের ঠিকানা নির্বাচন করুন"
                 />
+                {formErrors.birthPlaceAddress && (
+                  <p className="text-red-500 text-sm mt-1">{formErrors.birthPlaceAddress}</p>
+                )}
               </div>
 
               <div className="flex justify-between pt-6">
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   পূর্ববর্তী
                 </button>
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   পরবর্তী
                 </button>
@@ -2013,17 +2601,19 @@ export default function BirthRegistrationForm({
           {/* Step 3: Parents Information */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                 পিতা-মাতার তথ্য
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Father's Information */}
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-gray-700">পিতার তথ্য</h4>
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-300">
+                    পিতার তথ্য
+                  </h4>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="father.ubrn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতার জন্ম নিবন্ধন নম্বর
                     </label>
                     <input
@@ -2036,31 +2626,24 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       placeholder="জন্ম নিবন্ধন নম্বর"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      জন্ম তারিখ (খ্রিঃ)
-                    </label>
-                    <input
-                      type="date"
+                  <div data-field="father.personBirthDate">
+                    <DateInput
                       value={formData.father.personBirthDate}
-                      onChange={(e) =>
-                        handleNestedInputChange(
-                          "father",
-                          "personBirthDate",
-                          e.target.value
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={(value) => handleNestedInputChange("father", "personBirthDate", value)}
+                      label="জন্ম তারিখ (খ্রিঃ)"
                     />
+                    {formErrors["father.personBirthDate"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["father.personBirthDate"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="father.personNameBn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতার নাম বাংলায় <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -2073,14 +2656,19 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["father.personNameBn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="পিতার নাম বাংলায়"
                       required
                     />
+                    {formErrors["father.personNameBn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["father.personNameBn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="father.personNameEn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতার নাম ইংরেজিতে <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -2093,14 +2681,19 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["father.personNameEn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="Father's Name in English"
                       required
                     />
+                    {formErrors["father.personNameEn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["father.personNameEn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="father.personNid">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতার জাতীয় পরিচয়পত্র নম্বর
                     </label>
                     <input
@@ -2113,13 +2706,18 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["father.personNid"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="জাতীয় পরিচয়পত্র নম্বর"
                     />
+                    {formErrors["father.personNid"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["father.personNid"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="father.personNationality">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতার জাতীয়তা <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -2131,7 +2729,9 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["father.personNationality"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       required
                     >
                       <option value="">---নির্বাচন করুন---</option>
@@ -2140,14 +2740,17 @@ export default function BirthRegistrationForm({
                           key={nationality.value}
                           value={nationality.value}
                         >
-                          {nationality.labelBn}
+                          {nationality.value}
                         </option>
                       ))}
                     </select>
+                    {formErrors["father.personNationality"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["father.personNationality"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="father.passportNumber">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       পিতার পাসপোর্ট নম্বর
                     </label>
                     <input
@@ -2160,18 +2763,25 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["father.passportNumber"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="বিদেশে অবস্থানের ক্ষেত্রে পাসপোর্ট নম্বর"
                     />
+                    {formErrors["father.passportNumber"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["father.passportNumber"]}</p>
+                    )}
                   </div>
                 </div>
 
                 {/* Mother's Information */}
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-gray-700">মাতার তথ্য</h4>
+                  <h4 className="font-semibold text-gray-700 dark:text-gray-300">
+                    মাতার তথ্য
+                  </h4>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="mother.ubrn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       মাতার জন্ম নিবন্ধন নম্বর
                     </label>
                     <input
@@ -2184,31 +2794,24 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                       placeholder="জন্ম নিবন্ধন নম্বর"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      জন্ম তারিখ (খ্রিঃ)
-                    </label>
-                    <input
-                      type="date"
+                  <div data-field="mother.personBirthDate">
+                    <DateInput
                       value={formData.mother.personBirthDate}
-                      onChange={(e) =>
-                        handleNestedInputChange(
-                          "mother",
-                          "personBirthDate",
-                          e.target.value
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={(value) => handleNestedInputChange("mother", "personBirthDate", value)}
+                      label="জন্ম তারিখ (খ্রিঃ)"
                     />
+                    {formErrors["mother.personBirthDate"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["mother.personBirthDate"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="mother.personNameBn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       মাতার নাম বাংলায় <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -2221,14 +2824,19 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["mother.personNameBn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="মাতার নাম বাংলায়"
                       required
                     />
+                    {formErrors["mother.personNameBn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["mother.personNameBn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="mother.personNameEn">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       মাতার নাম ইংরেজিতে <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -2241,14 +2849,19 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["mother.personNameEn"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="Mother's Name in English"
                       required
                     />
+                    {formErrors["mother.personNameEn"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["mother.personNameEn"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="mother.personNid">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       মাতার জাতীয় পরিচয়পত্র নম্বর
                     </label>
                     <input
@@ -2261,13 +2874,18 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["mother.personNid"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="জাতীয় পরিচয়পত্র নম্বর"
                     />
+                    {formErrors["mother.personNid"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["mother.personNid"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="mother.personNationality">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       মাতার জাতীয়তা <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -2279,7 +2897,9 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["mother.personNationality"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       required
                     >
                       <option value="">---নির্বাচন করুন---</option>
@@ -2288,14 +2908,17 @@ export default function BirthRegistrationForm({
                           key={nationality.value}
                           value={nationality.value}
                         >
-                          {nationality.labelBn}
+                          {nationality.value}
                         </option>
                       ))}
                     </select>
+                    {formErrors["mother.personNationality"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["mother.personNationality"]}</p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div data-field="mother.passportNumber">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       মাতার পাসপোর্ট নম্বর
                     </label>
                     <input
@@ -2308,9 +2931,14 @@ export default function BirthRegistrationForm({
                           e.target.value
                         )
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                        formErrors["mother.passportNumber"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="বিদেশে অবস্থানের ক্ষেত্রে পাসপোর্ট নম্বর"
                     />
+                    {formErrors["mother.passportNumber"] && (
+                      <p className="text-red-500 text-sm mt-1">{formErrors["mother.passportNumber"]}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2319,14 +2947,14 @@ export default function BirthRegistrationForm({
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   পূর্ববর্তী
                 </button>
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   পরবর্তী
                 </button>
@@ -2337,13 +2965,13 @@ export default function BirthRegistrationForm({
           {/* Step 4: Address Information & File Upload */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                 ঠিকানা ও আবেদনকারীর তথ্য
               </h3>
 
               <div className="space-y-6">
                 {/* Permanent Address */}
-                <div className="border-b pb-6">
+                <div className="border-b dark:border-gray-700 pb-6" data-field="permAddrAddress">
                   <label className="flex items-center space-x-3 mb-4">
                     <input
                       type="checkbox"
@@ -2356,7 +2984,7 @@ export default function BirthRegistrationForm({
                       }
                       className="text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-gray-700 font-medium">
+                    <span className="text-gray-700 dark:text-gray-300 font-medium">
                       জন্মস্থানের ঠিকানা ও স্থায়ী ঠিকানা একই
                     </span>
                   </label>
@@ -2370,14 +2998,17 @@ export default function BirthRegistrationForm({
                       buttonText="স্থায়ী ঠিকানা নির্বাচন করুন"
                     />
                   )}
+                  {formErrors.permAddrAddress && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.permAddrAddress}</p>
+                  )}
                 </div>
 
                 {/* File Upload Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                <div data-field="attachments">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
                     ফাইল আপলোড
                   </h3>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
                     শুধুমাত্র ইমেজ ফাইল (.jpg, .jpeg, .png) আপলোড করা যাবে।
                     (প্রতিটি ফাইলের জন্য সর্বোচ্চ ফাইল সাইজ 2 মেগা বাইট)
                   </p>
@@ -2386,8 +3017,8 @@ export default function BirthRegistrationForm({
                   <div
                     className={`mt-2 border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                       isDragOver
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-300 bg-gray-50"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                        : "border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50"
                     }`}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -2408,10 +3039,10 @@ export default function BirthRegistrationForm({
                         />
                       </svg>
                       <div>
-                        <p className="text-lg font-medium text-gray-700 mb-2">
+                        <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">
                           ফাইল এখানে ড্রপ করুন
                         </p>
-                        <p className="text-sm text-gray-500 mb-4">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                           অথবা ফাইল নির্বাচন করতে ক্লিক করুন
                         </p>
                       </div>
@@ -2430,7 +3061,7 @@ export default function BirthRegistrationForm({
                       >
                         ফাইল নির্বাচন করুন
                       </button>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         JPG, PNG, PDF ফাইল সমর্থিত • সর্বোচ্চ 2MB প্রতি ফাইল
                       </p>
                     </div>
@@ -2439,20 +3070,20 @@ export default function BirthRegistrationForm({
                   {/* Uploading list */}
                   {uploadingFiles.length > 0 && (
                     <div className="mt-6">
-                      <h4 className="font-medium text-gray-700 mb-3">
+                      <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
                         নির্বাচিত ফাইল ({uploadingFiles.length})
                       </h4>
                       <div className="space-y-3">
                         {uploadingFiles.map((item, idx) => (
                           <div
                             key={`uploading-${idx}`}
-                            className="flex items-center gap-3 p-3 bg-white rounded-lg border"
+                            className="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600"
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-700 truncate">
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                                 {item.file.name}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {(item.file.size / 1024 / 1024).toFixed(2)} MB
                               </p>
                             </div>
@@ -2461,7 +3092,7 @@ export default function BirthRegistrationForm({
                               onChange={(e) =>
                                 updateUploadingFileType(idx, e.target.value)
                               }
-                              className="px-3 py-2 border rounded text-sm"
+                              className="px-3 py-2 border dark:border-gray-600 rounded text-sm dark:bg-gray-600 dark:text-white"
                             >
                               <option value="-1">---টাইপ নির্বাচন---</option>
                               {fileTypes.map((t) => (
@@ -2480,7 +3111,7 @@ export default function BirthRegistrationForm({
                             <button
                               type="button"
                               onClick={() => removeUploadingFile(idx)}
-                              className="p-2 text-red-600 hover:text-red-800 transition-colors"
+                              className="p-2 text-red-600 hover:text-red-800 dark:hover:text-red-400 transition-colors"
                               title="Remove file"
                             >
                               <svg
@@ -2506,36 +3137,32 @@ export default function BirthRegistrationForm({
                   {/* Uploaded list */}
                   {uploadedFiles.length > 0 && (
                     <div className="mt-6">
-                      <h4 className="font-medium text-gray-700 mb-3">
+                      <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-3">
                         আপলোডকৃত ফাইল ({uploadedFiles.length})
                       </h4>
                       <div className="space-y-2">
                         {uploadedFiles.map((f) => (
                           <div
                             key={`uploaded-${f.id}`}
-                            className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
+                            className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
                           >
                             <div className="flex-1 min-w-0">
                               <a
                                 href={f.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-green-700 hover:underline font-medium text-sm truncate block"
+                                className="text-green-700 dark:text-green-400 hover:underline font-medium text-sm truncate block"
                               >
                                 {f.name}
                               </a>
-                              <p className="text-xs text-green-600">
+                              <p className="text-xs text-green-600 dark:text-green-400">
                                 {f.fileType}
                               </p>
                             </div>
                             <button
                               type="button"
-                              onClick={() =>
-                                setUploadedFiles((p) =>
-                                  p.filter((x) => x.id !== f.id)
-                                )
-                              }
-                              className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                              onClick={() => removeUploadedFile(f.id)}
+                              className="p-1 text-red-600 hover:text-red-800 dark:hover:text-red-400 transition-colors"
                               title="Delete file"
                             >
                               <svg
@@ -2557,17 +3184,20 @@ export default function BirthRegistrationForm({
                       </div>
                     </div>
                   )}
+                  {formErrors.attachments && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.attachments}</p>
+                  )}
                 </div>
 
                 {/* Applicant Information */}
-                <div className="border-b pb-6">
-                  <h4 className="font-semibold text-gray-800 mb-4">
+                <div className="border-b dark:border-gray-700 pb-6">
+                  <h4 className="font-semibold text-gray-800 dark:text-white mb-4">
                     আবেদনকারীর তথ্য
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div data-field="applicant.name">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         আবেদনকারীর নাম <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -2580,14 +3210,19 @@ export default function BirthRegistrationForm({
                             e.target.value
                           )
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                          formErrors["applicant.name"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         placeholder="আবেদনকারীর নাম"
                         required
                       />
+                      {formErrors["applicant.name"] && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors["applicant.name"]}</p>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div data-field="applicant.nid">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         জাতীয় পরিচয়পত্র নম্বর
                       </label>
                       <input
@@ -2600,13 +3235,18 @@ export default function BirthRegistrationForm({
                             e.target.value
                           )
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                          formErrors["applicant.nid"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         placeholder="জাতীয় পরিচয়পত্র নম্বর"
                       />
+                      {formErrors["applicant.nid"] && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors["applicant.nid"]}</p>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div data-field="applicant.phone">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         মোবাইল নম্বর <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -2619,14 +3259,19 @@ export default function BirthRegistrationForm({
                             e.target.value
                           )
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                          formErrors["applicant.phone"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         placeholder="মোবাইল নম্বর"
                         required
                       />
+                      {formErrors["applicant.phone"] && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors["applicant.phone"]}</p>
+                      )}
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div data-field="applicant.email">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         ইমেইল ঠিকানা
                       </label>
                       <input
@@ -2639,13 +3284,18 @@ export default function BirthRegistrationForm({
                             e.target.value
                           )
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                          formErrors["applicant.email"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         placeholder="ইমেইল ঠিকানা"
                       />
+                      {formErrors["applicant.email"] && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors["applicant.email"]}</p>
+                      )}
                     </div>
 
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="md:col-span-2" data-field="applicant.relation">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         নিবন্ধনাধীন ব্যক্তির সাথে সম্পর্ক{" "}
                         <span className="text-red-500">*</span>
                       </label>
@@ -2658,7 +3308,9 @@ export default function BirthRegistrationForm({
                             e.target.value
                           )
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white ${
+                          formErrors["applicant.relation"] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         required
                       >
                         <option value="">---সম্পর্ক নির্বাচন করুন---</option>
@@ -2669,18 +3321,21 @@ export default function BirthRegistrationForm({
                         <option value="SELF">নিজে</option>
                         <option value="OTHER">অন্যান্য</option>
                       </select>
+                      {formErrors["applicant.relation"] && (
+                        <p className="text-red-500 text-sm mt-1">{formErrors["applicant.relation"]}</p>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Upload Summary */}
                 {uploadedFiles.length > 0 && (
-                  <div className="border-b pb-6">
-                    <h4 className="font-semibold text-gray-800 mb-4">
+                  <div className="border-b dark:border-gray-700 pb-6">
+                    <h4 className="font-semibold text-gray-800 dark:text-white mb-4">
                       আপলোডকৃত ফাইল সমূহ
                     </h4>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-blue-800 text-sm mb-2">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <p className="text-blue-800 dark:text-blue-300 text-sm mb-2">
                         মোট আপলোডকৃত ফাইল: {uploadedFiles.length}টি
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
@@ -2689,14 +3344,16 @@ export default function BirthRegistrationForm({
                             key={file.id}
                             className="flex justify-between items-center"
                           >
-                            <span className="text-gray-700">{file.name}</span>
+                            <span className="text-gray-700 dark:text-gray-300">
+                              {file.name}
+                            </span>
                             <span
                               className={`px-2 py-1 rounded ${
                                 file.uploadedId
-                                  ? "bg-green-100 text-green-800"
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                   : file.isUploading
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-yellow-100 text-yellow-800"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
                               }`}
                             >
                               {file.uploadedId
@@ -2720,7 +3377,7 @@ export default function BirthRegistrationForm({
                       required
                       className="text-blue-600 focus:ring-blue-500 mt-1"
                     />
-                    <span className="text-gray-700 text-sm">
+                    <span className="text-gray-700 dark:text-gray-300 text-sm">
                       আমি ঘোষণা করছি যে, উপরে বর্ণিত সকল তথ্য সঠিক ও বস্তুনিষ্ঠ।
                       ভুল তথ্য প্রদানের জন্য আমি আইনত দায়ী থাকব।
                     </span>
@@ -2728,17 +3385,17 @@ export default function BirthRegistrationForm({
                 </div>
               </div>
 
-              <div className="flex justify-between pt-6 border-t">
+              <div className="flex justify-between pt-6 border-t dark:border-gray-700">
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   পূর্ববর্তী
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 >
                   আবেদন জমা দিন
                 </button>

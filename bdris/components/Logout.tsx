@@ -1,15 +1,27 @@
 "use client";
 
+import { useAppDispatch } from "@/lib/hooks";
+import { userLogout } from "@/lib/userSlice";
+import axios from "axios";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function LogoutButton() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   const handleLogout = () => {
-    // Clear auth (example: localStorage / cookie / context)
-    localStorage.removeItem("token"); // replace with your auth logic
-    router.push("/login"); // redirect to login page
+    async function fetchData() {
+      try {
+        await axios.get(`/api/logout`, { withCredentials: true });
+        dispatch(userLogout());
+        router.push("/login");
+      } catch (error) {
+        toast.error("Error logging out. Please try again.");
+      }
+    }
+    fetchData();
   };
 
   return (
